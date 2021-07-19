@@ -28,7 +28,7 @@ from global_utils.layers.unpooling_with_argmax import UnMaxPoolWithArgmax
 from global_utils.layers.sampling import sample_from_latent_space
 
 
-def create_model(hp):
+def create_model_c_vae(hp):
 
     sample_size = 120
     batch_size = 32

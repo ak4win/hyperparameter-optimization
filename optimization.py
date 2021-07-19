@@ -18,7 +18,7 @@ from keras_tuner import RandomSearch, BayesianOptimization, Hyperband
 # own modules layers
 from global_utils.get_data_multi_note_without_smoothing import get_data
 from global_utils.evaluation import per_rms_diff, smooth_output
-from model import create_model
+from c_vae_model import create_model_c_vae
 import global_utils.plotter as plotter
 
 plot = plotter.Plotter("VAE", plt)
@@ -29,6 +29,8 @@ batch_size = 32
 smoothing_true = True
 
 the_choice = "HP"
+
+create_model = create_model_c_vae
 
 optimization_method = {
     "RS": RandomSearch(
