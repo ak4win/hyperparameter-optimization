@@ -1,6 +1,4 @@
 # Set the seed
-from keras_tuner.engine.hyperparameters import HyperParameters
-from numpy.core.fromnumeric import reshape
 from numpy.random import seed
 
 seed(1)
@@ -12,8 +10,6 @@ tf.random.set_seed(2)
 
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.losses import mse, mae
-from tensorflow.keras.callbacks import EarlyStopping
 
 # machine learning libaries
 from tensorflow.keras.layers import (
@@ -91,7 +87,6 @@ def create_model(hp):
 
     out_max_pool_2, mask6 = MaxPoolWithArgMax()(out_pool4)
 
-    conv_dims = out_max_pool_2.shape[1:]
     out_flatten = Flatten()(out_max_pool_2)
     out_dense1 = Dense(27, activation="relu")(out_flatten)
     z_mean = Dense(5, activation="relu", name="z_mean")(out_dense1)
