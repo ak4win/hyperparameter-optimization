@@ -1,5 +1,4 @@
 # Set the seed
-from keras_tuner.engine.hyperparameters import HyperParameters
 from numpy.random import seed
 
 seed(1)
