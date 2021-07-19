@@ -1,25 +1,38 @@
 from tensorflow.keras import layers
 import tensorflow.keras.backend as K
-import tensorflow as tf
+
+# import tensorflow as tf
+
 
 class CustomConv2DTranspose(layers.Layer):
-    def __init__(self,filters,kernel_size, output_shape, activation, **kwargs):
+    def __init__(self, filters, kernel_size, output_shape, activation, **kwargs):
         super(CustomConv2DTranspose, self).__init__(**kwargs)
 
         self.filters = filters
         self.kernel_size = kernel_size
         self.output_shape_ = output_shape
-        self.activation = {'tanh': K.tanh, 'relu': K.relu, 'sigmoid': K.sigmoid}[activation]
+        self.activation = {"tanh": K.tanh, "relu": K.relu, "sigmoid": K.sigmoid}[
+            activation
+        ]
 
         self.trainable = True
 
     def build(self, input_shape):
-        self.kernel = self.add_weight(name='kernel', shape=(self.kernel_size, 1, 1, self.filters), initializer='uniform', trainable=True)
-        self.bias = self.add_weight(name='bias', shape=(1,), initializer='uniform', trainable=True)
+        self.kernel = self.add_weight(
+            name="kernel",
+            shape=(self.kernel_size, 1, 1, self.filters),
+            initializer="uniform",
+            trainable=True,
+        )
+        self.bias = self.add_weight(
+            name="bias", shape=(1,), initializer="uniform", trainable=True
+        )
 
     def call(self, inputs, **kwargs):
-        strides = (self.kernel_size,1)
-        convoluted_output = K.conv2d_transpose(inputs, self.kernel, self.output_shape_, strides=strides, padding='same')
+        strides = (self.kernel_size, 1)
+        convoluted_output = K.conv2d_transpose(
+            inputs, self.kernel, self.output_shape_, strides=strides, padding="same"
+        )
 
         outputs = convoluted_output + self.bias
         activations = self.activation(outputs)
