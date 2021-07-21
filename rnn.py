@@ -7,18 +7,19 @@ from tensorflow.keras.layers import LSTM, Input, RepeatVector
 from tensorflow.keras.models import Model
 
 
-def create_model(
-    sequence_length: int,
-    n_dims: int,
-    batch_size: int,
-    activation: str = "tanh",
-    recurrent_activation: str = "sigmoid",
+def create_model(hp):
+
+    sequence_length = hp.Choice("encoder_activation", ["relu", "tanh"])
+    n_dims = hp.Choice("encoder_activation", ["relu", "tanh"])
+    batch_size = hp.Choice("encoder_activation", ["relu", "tanh"])
+    activation = "tanh"
+    recurrent_activation = "sigmoid"
     # kernel_regularizer=l2(0.0),
     # bias_regularizer=l2(0.0),
     # activity_regularizer=l2(0.0),
-    dropout: float = 0.0,
-    recurrent_dropout: float = 0.0,
-):
+    dropout = 0.0
+    recurrent_dropout = 0.0
+
     # [batch, timesteps, feature] is shape of inputs
     inputs: Input = Input(shape=(sequence_length, n_dims), batch_size=batch_size)
     x = inputs
