@@ -3,17 +3,19 @@ from numpy.random import seed
 seed(1)
 
 # Tensorflow imports
+import tensorflow as tf
 from tensorflow.keras.layers import LSTM, Input, RepeatVector
 from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
 
 
-def create_model(hp):
+def create_model_rnn(hp):
 
-    sequence_length = hp.Choice("encoder_activation", ["relu", "tanh"])
+    sequence_length = 20
     n_dims = hp.Choice("encoder_activation", ["relu", "tanh"])
-    batch_size = hp.Choice("encoder_activation", ["relu", "tanh"])
-    activation = "tanh"
-    recurrent_activation = "sigmoid"
+    batch_size = 1
+    activation = hp.Choice("activation", ["relu", "tanh"])
+    recurrent_activation = hp.Choice("reccurent_activation", ["relu", "sigmoid"])
     # kernel_regularizer=l2(0.0),
     # bias_regularizer=l2(0.0),
     # activity_regularizer=l2(0.0),
@@ -21,7 +23,7 @@ def create_model(hp):
     recurrent_dropout = 0.0
 
     # [batch, timesteps, feature] is shape of inputs
-    inputs: Input = Input(shape=(sequence_length, n_dims), batch_size=batch_size)
+    inputs = Input(shape=(sequence_length, n_dims), batch_size=batch_size)
     x = inputs
     x = LSTM(
         n_dims,
@@ -53,6 +55,11 @@ def create_model(hp):
     outputs = x
 
     model = Model(inputs, outputs)
-    model.compile(optimizer="adam", loss="mse")
-    model.summary()
+
+    model.compile(
+        optimizer=Adam(hp.Choice("learning_rate", values=[1e-2, 1e-3, 1e-4])),
+        loss=hp.Choice("loss_function", hp.Choice("loss_function", ["mse", "mae"])),
+        metrics=[tf.keras.metrics.MeanSquaredError()],
+    )
+
     return model
