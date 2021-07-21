@@ -9,7 +9,7 @@ def read_and_preprocess_data(
     cut_off_min=5,
     cut_off_max=45,
     should_scale=True,
-    data_path="/home/paperspace/Hyperparameters-Optimization-Methods/datasets/data.txt",
+    data_path="/home/paperspace/development/datasets/data.txt",
     batch_size=32,
     motes_train=[1, 2, 3, 4, 6, 7, 9, 10, 32, 34, 35],
     motes_test=[36],
