@@ -12,10 +12,11 @@ from tensorflow.keras.optimizers import Adam
 def create_model_rnn(hp):
 
     sequence_length = 20
-    n_dims = hp.Choice("encoder_activation", ["relu", "tanh"])
+    n_dims = 1
     batch_size = 1
     activation = hp.Choice("activation", ["relu", "tanh"])
     recurrent_activation = hp.Choice("reccurent_activation", ["relu", "sigmoid"])
+
     # kernel_regularizer=l2(0.0),
     # bias_regularizer=l2(0.0),
     # activity_regularizer=l2(0.0),
