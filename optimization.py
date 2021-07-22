@@ -19,8 +19,8 @@ from keras_tuner import RandomSearch, BayesianOptimization, Hyperband
 from global_utils.get_data_multi_note import read_and_preprocess_data
 from global_utils.evaluation import per_rms_diff, smooth_output
 from global_utils.train_model import train_best_model
-from c_vae_model import create_model_c_vae
-from rnn import create_model_rnn
+from models.c_vae_model import create_model_c_vae
+from models.rnn import create_model_rnn
 import global_utils.plotter as plotter
 
 plot = plotter.Plotter("model", plt)
