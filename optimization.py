@@ -116,7 +116,7 @@ tuner = optimization_method
 
 summary_search_space = tuner.search_space_summary()
 
-stop_early = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=3)
+stop_early = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=3, restore_best_weights=True)
 
 optimization = tuner.search(
     x_train,
