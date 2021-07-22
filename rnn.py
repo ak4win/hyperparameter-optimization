@@ -14,8 +14,8 @@ def create_model_rnn(hp):
     sequence_length = 20
     n_dims = 1
     batch_size = 1
-    activation = hp.Choice("activation", ["relu", "tanh"])
-    recurrent_activation = hp.Choice("reccurent_activation", ["relu", "sigmoid"])
+    activation = hp.Choice("activation", ["tanh"])
+    recurrent_activation = hp.Choice("reccurent_activation", ["sigmoid"])
 
     # kernel_regularizer=l2(0.0),
     # bias_regularizer=l2(0.0),
@@ -61,7 +61,7 @@ def create_model_rnn(hp):
 
     model.compile(
         optimizer=Adam(hp.Choice("learning_rate", values=[1e-2, 1e-3, 1e-4])),
-        loss=hp.Choice("loss_function", hp.Choice("loss_function", ["mse", "mae"])),
+        loss=hp.Choice("loss_function", hp.Choice("loss_function", ["mse"])),
         metrics=[tf.keras.metrics.MeanSquaredError()],
     )
 

@@ -18,6 +18,7 @@ from keras_tuner import RandomSearch, BayesianOptimization, Hyperband
 # own modules layers
 from global_utils.get_data_multi_note import read_and_preprocess_data
 from global_utils.evaluation import per_rms_diff, smooth_output
+from global_utils.train_model import train_best_model
 from c_vae_model import create_model_c_vae
 from rnn import create_model_rnn
 import global_utils.plotter as plotter
@@ -57,8 +58,9 @@ else:
     batch_size = 32
     sample_size = 120
     x_train, x_test = read_and_preprocess_data()
-
     create_model = create_model_c_vae
+
+file_path = f"/home/paperspace/hyperparameter-optimization/save_models/{the_model}"
 
 optimization_method = {
     "RS": RandomSearch(
@@ -132,10 +134,16 @@ optimization = tuner.search(
 
 best_model = tuner.get_best_models()[0]
 
-val_predictions = best_model.predict(x_test, batch_size=batch_size)
+tf.keras.models.save_model(best_model, file_path, overwrite=True)
+
+# val_predictions = best_model.predict(x_test, batch_size=batch_size)
+
+history, train_preds, test_preds = train_best_model(
+    the_model, x_train, x_test, batch_size, epochs=20
+)
 
 # if smoothing_true is True:
-diff, evaluation = smooth_output(x_test, val_predictions, smoothing_window=3)
+diff, evaluation = smooth_output(x_test, test_preds, smoothing_window=3)
 print(evaluation)
 # else:
 # evaluation = per_rms_diff(x_test.reshape(-1), val_predictions)
