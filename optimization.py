@@ -24,7 +24,7 @@ import global_utils.plotter as plotter
 
 plot = plotter.Plotter("model", plt)
 
-the_model = "RNN"
+the_model = "CBN_VAE"  # or CBN_VAE
 the_optimization_method = "RS"
 smoothing_true = True
 
@@ -64,12 +64,12 @@ optimization_method = {
     "RS": RandomSearch(
         create_model,  # model instance, whose hyper-parameters are optimized
         objective="val_loss",  # the direction of the optimization
-        max_trials=2,  # the max. amount of model configurations that are tested
-        executions_per_trial=3,  # how many rounds the model with that configuration is trained to reduce variance
+        max_trials=1,  # the max. amount of model configurations that are tested
+        executions_per_trial=1,  # how many rounds the model with that configuration is trained to reduce variance
         # seed=1,  # set the seed
         overwrite=True,  # boolean whether to overwrite the project
-        directory="test_random_search"  # the relative path to the working directory
-        # project_name="test_random_seach_v1",
+        directory=f"save_results/{the_model}/random_search",  # the relative path to the working directory
+        project_name="results",
     ),
     "BO": BayesianOptimization(
         create_model,  # model instance, whose hyper-parameters are optimized
@@ -81,8 +81,8 @@ optimization_method = {
         executions_per_trial=1,  # how many rounds the model with that configuration is trained to reduce variance
         # seed=1,  # set the seed
         overwrite=True,  # boolean whether to overwrite the project
-        directory="test_bayesian_optimization"  # the relative path to the working directory
-        # project_name="test_random_seach_v1",
+        directory=f"save_results/{the_model}/bayesian",  # the relative path to the working directory
+        project_name="results",
     ),
     "HP": Hyperband(
         create_model,  # model instance, whose hyper-parameters are optimized
@@ -93,7 +93,8 @@ optimization_method = {
         executions_per_trial=1,  # how many rounds the model with that configuration is trained to reduce variance
         # seed=1,  # set the seed
         overwrite=True,  # boolean whether to overwrite the project
-        directory="test_hyperband_optimization",
+        directory=f"save_results/{the_model}/hyperband",
+        project_name="results",
     ),
 }[the_optimization_method]
 
@@ -116,12 +117,14 @@ tuner = optimization_method
 
 summary_search_space = tuner.search_space_summary()
 
-stop_early = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=3, restore_best_weights=True)
+stop_early = tf.keras.callbacks.EarlyStopping(
+    monitor="val_loss", patience=3, restore_best_weights=True
+)
 
 optimization = tuner.search(
     x_train,
     x_train,
-    epochs=25,
+    epochs=1,
     validation_data=(x_test, x_test),
     callbacks=[stop_early],
     batch_size=batch_size,
@@ -135,7 +138,7 @@ val_predictions = best_model.predict(x_test, batch_size=batch_size)
 diff, evaluation = smooth_output(x_test, val_predictions, smoothing_window=3)
 print(evaluation)
 # else:
-evaluation = per_rms_diff(x_test.reshape(-1), val_predictions)
+# evaluation = per_rms_diff(x_test.reshape(-1), val_predictions)
 # print(evaluation)
 
 plt.plot(x_test.reshape(-1)[3000:4000], label="test-data")

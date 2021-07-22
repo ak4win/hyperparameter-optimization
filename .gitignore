@@ -3,3 +3,5 @@ data/IntelBerkeleyResearchLab.txt
 __pycache__
 test_*
 plots
+save_results
+save_models
