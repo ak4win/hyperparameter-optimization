@@ -38,6 +38,7 @@ def create_model_rnn(hp):
         dropout=dropout,
         recurrent_dropout=recurrent_dropout,
     )(x)
+
     x = RepeatVector(sequence_length)(x)
     x = LSTM(
         n_dims,
@@ -53,6 +54,7 @@ def create_model_rnn(hp):
         dropout=dropout,
         recurrent_dropout=recurrent_dropout,
     )(x)
+
     outputs = x
 
     model = Model(inputs, outputs)

@@ -16,21 +16,49 @@ import matplotlib.pyplot as plt
 from keras_tuner import RandomSearch, BayesianOptimization, Hyperband
 
 # own modules layers
-from global_utils.get_data_multi_note_without_smoothing import get_data
+from global_utils.get_data_multi_note import read_and_preprocess_data
 from global_utils.evaluation import per_rms_diff, smooth_output
 from c_vae_model import create_model_c_vae
+from rnn import create_model_rnn
 import global_utils.plotter as plotter
 
-plot = plotter.Plotter("VAE", plt)
+plot = plotter.Plotter("model", plt)
 
-x_train, x_test = get_data()
-sample_size = 120
-batch_size = 32
+the_model = "RNN"
+the_optimization_method = "RS"
 smoothing_true = True
 
-the_choice = "HP"
+if the_model == "RNN":
 
-create_model = create_model_c_vae
+    batch_size = 1
+    sequence_length = 20
+
+    x_train, x_test = read_and_preprocess_data(
+        should_smooth=False,
+        smoothing_window=100,
+        sequence_length=sequence_length,
+        cut_off_min=5,
+        cut_off_max=45,
+        should_scale=True,
+        batch_size=batch_size,
+        motes_train=[7],
+        motes_test=[7],
+    )
+
+    print(x_train.shape)
+    print(x_test.shape)
+
+    x_train = x_train[:1900, :, :]
+    x_test = x_test[1900:, :, :]
+
+    create_model = create_model_rnn
+
+else:
+    batch_size = 32
+    sample_size = 120
+    x_train, x_test = read_and_preprocess_data()
+
+    create_model = create_model_c_vae
 
 optimization_method = {
     "RS": RandomSearch(
@@ -67,7 +95,7 @@ optimization_method = {
         overwrite=True,  # boolean whether to overwrite the project
         directory="test_hyperband_optimization",
     ),
-}[the_choice]
+}[the_optimization_method]
 
 tuner = optimization_method
 
@@ -96,11 +124,12 @@ optimization = tuner.search(
     epochs=25,
     validation_data=(x_test, x_test),
     callbacks=[stop_early],
+    batch_size=batch_size,
 )
 
 best_model = tuner.get_best_models()[0]
 
-val_predictions = best_model.predict(x_test)
+val_predictions = best_model.predict(x_test, batch_size=batch_size)
 
 # if smoothing_true is True:
 diff, evaluation = smooth_output(x_test, val_predictions, smoothing_window=3)
