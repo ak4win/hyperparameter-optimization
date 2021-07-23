@@ -26,8 +26,9 @@ import global_utils.plotter as plotter
 plot = plotter.Plotter("model", plt)
 
 the_model = "CBN_VAE"  # or CBN_VAE
-the_optimization_method = "RS"
+the_optimization_method = "BO"
 smoothing_true = True
+epochs = 32
 
 if the_model == "RNN":
 
@@ -80,7 +81,7 @@ optimization_method = {
         num_initial_points=3,  # number of randomly generated samples
         alpha=1e-4,  # the expected amount of noise in the observed performances
         beta=2.6,  # factor to balance exploration and explotation
-        executions_per_trial=1,  # how many rounds the model with that configuration is trained to reduce variance
+        executions_per_trial=2,  # how many rounds the model with that configuration is trained to reduce variance
         # seed=1,  # set the seed
         overwrite=True,  # boolean whether to overwrite the project
         directory=f"save_results/{the_model}/bayesian",  # the relative path to the working directory
@@ -102,21 +103,6 @@ optimization_method = {
 
 tuner = optimization_method
 
-# if optimization_method is RandomSearch:
-#     tuner = optimization_method(
-#         create_model,
-#         objective="val_loss",
-#         max_trials=10,
-#         executions_per_trial=3,
-#         overwrite=True,
-#         directory="test_random_search"
-# project_name="test_random_seach_v1",
-# )
-# elif optimization_method is BayesianOptimization:
-
-# elif optimization is Hyperband:
-
-
 summary_search_space = tuner.search_space_summary()
 
 stop_early = tf.keras.callbacks.EarlyStopping(
@@ -126,7 +112,7 @@ stop_early = tf.keras.callbacks.EarlyStopping(
 optimization = tuner.search(
     x_train,
     x_train,
-    epochs=1,
+    epochs=epochs,
     validation_data=(x_test, x_test),
     callbacks=[stop_early],
     batch_size=batch_size,
@@ -138,9 +124,11 @@ tf.keras.models.save_model(best_model, file_path, overwrite=True)
 
 # val_predictions = best_model.predict(x_test, batch_size=batch_size)
 
-history, train_preds, test_preds = train_best_model(
-    the_model, x_train, x_test, batch_size, epochs=20
+history, train_preds, test_preds, model_after_training = train_best_model(
+    the_model, x_train, x_test, batch_size, epochs=40
 )
+
+tf.keras.models.save_model(model_after_training, file_path, overwrite=True)
 
 # if smoothing_true is True:
 diff, evaluation = smooth_output(x_test, test_preds, smoothing_window=3)

@@ -23,4 +23,4 @@ def train_best_model(model_category, x_train, x_test, batch_size, epochs):
     train_preds = model.predict(x_train, batch_size=batch_size)
     test_preds = model.predict(x_test, batch_size=batch_size)
 
-    return history, train_preds, test_preds
+    return history, train_preds, test_preds, model

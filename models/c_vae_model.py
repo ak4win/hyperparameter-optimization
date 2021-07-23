@@ -33,8 +33,11 @@ def create_model_c_vae(hp):
     sample_size = 120
     batch_size = 32
 
-    encoder_activation = hp.Choice("encoder_activation", ["relu", "tanh"])
-    decoder_activation = hp.Choice("decoder_activation", ["relu", "tanh"])
+    encoder_activation = hp.Choice("encoder_activation", ["relu", "tanh", "sigmoid"])
+    decoder_activation = hp.Choice("decoder_activation", ["relu", "tanh", "sigmoid"])
+    bottleneck_activation = hp.Choice(
+        "bottleneck_activation", ["relu", "tanh", "sigmoid"]
+    )
 
     # Encoder
     inputs = Input(shape=(sample_size, 1, 1), batch_size=batch_size)
@@ -88,9 +91,9 @@ def create_model_c_vae(hp):
     out_max_pool_2, mask6 = MaxPoolWithArgMax()(out_pool4)
 
     out_flatten = Flatten()(out_max_pool_2)
-    out_dense1 = Dense(27, activation="relu")(out_flatten)
-    z_mean = Dense(5, activation="relu", name="z_mean")(out_dense1)
-    z_log_var = Dense(5, activation="relu", name="z_log_var")(out_dense1)
+    out_dense1 = Dense(27, activation=bottleneck_activation)(out_flatten)
+    z_mean = Dense(5, activation=bottleneck_activation, name="z_mean")(out_dense1)
+    z_log_var = Dense(5, activation=bottleneck_activation, name="z_log_var")(out_dense1)
     z = Lambda(sample_from_latent_space, output_shape=(5,), name="z")(
         [z_mean, z_log_var]
     )

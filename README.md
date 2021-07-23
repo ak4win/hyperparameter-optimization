@@ -4,3 +4,4 @@
 ## ToDo List
 - callback early stopping
 - sequence length as hyperparameter
+- for what the different things stand for!
