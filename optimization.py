@@ -88,16 +88,13 @@ optimization_method = {
         overwrite=True,  # boolean whether to overwrite the project
         directory=f"save_results/{the_model}/bayesian",  # the relative path to the working directory
         project_name="results",
-        logger=TensorBoardLogger(
-            metrics=["val_acc"], logdir=f"save_results/{the_model}/bayesian_logs"
-        ),
     ),
     "HP": Hyperband(
         create_model,  # model instance, whose hyper-parameters are optimized
         objective="val_loss",  # the direction of the optimization
-        max_epochs=25,  # the max. amount of model configurations that are tested
+        max_epochs=2,  # the max. amount of model configurations that are tested
         factor=3,  # reduction factor for the number of epochs and number of models for each bracket
-        hyperband_iterations=2,  # number of times to iterate over the full Hyperband algorithm
+        hyperband_iterations=1,  # number of times to iterate over the full Hyperband algorithm
         executions_per_trial=1,  # how many rounds the model with that configuration is trained to reduce variance
         # seed=1,  # set the seed
         overwrite=True,  # boolean whether to overwrite the project
@@ -114,6 +111,10 @@ stop_early = tf.keras.callbacks.EarlyStopping(
     monitor="val_loss", patience=3, restore_best_weights=True
 )
 
+tensorboard_log = tf.keras.callbacks.TensorBoard(
+    f"save_results/{the_model}/{the_optimization_method}/tensorboard_logs"
+)
+
 setup_tb(tuner)
 
 optimization = tuner.search(
@@ -121,7 +122,7 @@ optimization = tuner.search(
     x_train,
     epochs=epochs,
     validation_data=(x_test, x_test),
-    callbacks=[stop_early],
+    callbacks=[stop_early, tensorboard_log],
     batch_size=batch_size,
 )
 
