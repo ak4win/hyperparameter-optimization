@@ -379,6 +379,18 @@ tensorboard = "*"
 tests = ["pytest", "flake8", "isort", "black", "portpicker", "pytest-xdist", "pytest-cov", "scikit-learn"]
 
 [[package]]
+name = "kerastuner-tensorboard-logger"
+version = "0.2.3"
+description = "Simple integration of keras-tuner (hyperparameter tuning) and tensorboard dashboard (interactive visualization)."
+category = "main"
+optional = false
+python-versions = ">=3.6,<4.0"
+
+[package.dependencies]
+keras-tuner = ">=1.0,<2.0"
+tensorflow = ">=2.0,<3.0"
+
+[[package]]
 name = "kiwisolver"
 version = "1.3.1"
 description = "A fast implementation of the Cassowary constraint solver"
@@ -952,7 +964,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7.10"
-content-hash = "c8bc1edaaae656552b6413748a3f2beddbce57b1641806e85292c6708fda17a7"
+content-hash = "4ef84d73a1c8f1bd986893f70c3e9b543fdadacde307990e0d773cb5b70ff9e3"
 
 [metadata.files]
 absl-py = [
@@ -1139,6 +1151,10 @@ keras-preprocessing = [
 keras-tuner = [
     {file = "keras-tuner-1.0.3.tar.gz", hash = "sha256:929a7ff1b8eb73166f95dd1dea1e5d45018e4bd33800c4a890116bff4b28ccf1"},
     {file = "keras_tuner-1.0.3-py3-none-any.whl", hash = "sha256:905caaf13bc6a3d82cc33e4aa17e51167a2f594d7fae0457b5028db4cdd83422"},
+]
+kerastuner-tensorboard-logger = [
+    {file = "kerastuner-tensorboard-logger-0.2.3.tar.gz", hash = "sha256:54acc205eeb611558ce878a72692d3574915b0a10c992bc5f9de311438f90ea5"},
+    {file = "kerastuner_tensorboard_logger-0.2.3-py3-none-any.whl", hash = "sha256:156acdba8b813ffbaafaf0e8e3d8d018c6b9a4f733a85f913a2b1b8b695d2e83"},
 ]
 kiwisolver = [
     {file = "kiwisolver-1.3.1-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:fd34fbbfbc40628200730bc1febe30631347103fc8d3d4fa012c21ab9c11eca9"},

@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 # hyper-parameter optimization
 from keras_tuner import RandomSearch, BayesianOptimization, Hyperband
 
+from kerastuner_tensorboard_logger import TensorBoardLogger, setup_tb  # Optional
+
 # own modules layers
 from global_utils.get_data_multi_note import read_and_preprocess_data
 from global_utils.evaluation import per_rms_diff, smooth_output
@@ -86,6 +88,9 @@ optimization_method = {
         overwrite=True,  # boolean whether to overwrite the project
         directory=f"save_results/{the_model}/bayesian",  # the relative path to the working directory
         project_name="results",
+        logger=TensorBoardLogger(
+            metrics=["val_acc"], logdir=f"save_results/{the_model}/bayesian_logs"
+        ),
     ),
     "HP": Hyperband(
         create_model,  # model instance, whose hyper-parameters are optimized
@@ -108,6 +113,8 @@ summary_search_space = tuner.search_space_summary()
 stop_early = tf.keras.callbacks.EarlyStopping(
     monitor="val_loss", patience=3, restore_best_weights=True
 )
+
+setup_tb(tuner)
 
 optimization = tuner.search(
     x_train,
