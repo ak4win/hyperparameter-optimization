@@ -5,3 +5,5 @@ test_*
 plots
 save_results
 save_models
+Testingit/__pycache__
+Testingit/mnist_data
