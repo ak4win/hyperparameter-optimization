@@ -64,7 +64,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-from Testingit.example_keras_workers import KerasWorker as worker
+from RNN_HpBandSter.keras_worker_rnn import KerasWorker as worker
 
 # Every process has to lookup the hostname
 host = hpns.nic_name_to_host(args.nic_name)

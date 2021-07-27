@@ -43,11 +43,12 @@ The purpose is not to achieve state of the art on MNIST, but to show how to use
 Keras inside HpBandSter, and to demonstrate a more complicated search space.
 """
 
+import tensorflow as tf
+
 import keras
-from keras.datasets import mnist
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten
-from keras.layers import Conv2D, MaxPooling2D
+from keras.models import Model
+from keras.layers import Input, RepeatVector
+from keras.layers import LSTM
 from keras import backend as K
 
 
@@ -56,50 +57,37 @@ import ConfigSpace.hyperparameters as CSH
 
 from hpbandster.core.worker import Worker
 
+from global_utils.get_data_multi_note import read_and_preprocess_data
+
+
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
 
 class KerasWorker(Worker):
-    def __init__(self, N_train=8192, N_valid=1024, **kwargs):
+    def __init__(self, **kwargs):
+
         super().__init__(**kwargs)
 
-        self.batch_size = 64
+        self.batch_size = 1
+        self.sequence_length = 20
+        self.n_dims = 1
 
-        img_rows = 28
-        img_cols = 28
-        self.num_classes = 10
-
-        # the data, split between train and test sets
-        (x_train, y_train), (x_test, y_test) = mnist.load_data(
-            path="/home/paperspace/hyperparameter-optimization/Testingit/mnist_data"
+        x_train, x_test = read_and_preprocess_data(
+            should_smooth=False,
+            smoothing_window=100,
+            sequence_length=self.sequence_length,
+            cut_off_min=5,
+            cut_off_max=45,
+            should_scale=True,
+            batch_size=self.batch_size,
+            motes_train=[7],
+            motes_test=[7],
         )
 
-        if K.image_data_format() == "channels_first":
-            x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
-            x_test = x_test.reshape(x_test.shape[0], 1, img_rows, img_cols)
-            self.input_shape = (1, img_rows, img_cols)
-        else:
-            x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 1)
-            x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
-            self.input_shape = (img_rows, img_cols, 1)
-
-        x_train = x_train.astype("float32")
-        x_test = x_test.astype("float32")
-        # zero-one normalization
-        x_train /= 255
-        x_test /= 255
-
-        # convert class vectors to binary class matrices
-        y_train = keras.utils.to_categorical(y_train, self.num_classes)
-        y_test = keras.utils.to_categorical(y_test, self.num_classes)
-
-        self.x_train, self.y_train = x_train[:N_train], y_train[:N_train]
-        self.x_validation, self.y_validation = x_train[-N_valid:], y_train[-N_valid:]
-        self.x_test, self.y_test = x_test, y_test
-
-        self.input_shape = (img_rows, img_cols, 1)
+        self.x_train = x_train[:1900, :, :]
+        self.x_test = x_test[1900:, :, :]
 
     def compute(self, config, budget, working_directory, *args, **kwargs):
         """
@@ -108,45 +96,42 @@ class KerasWorker(Worker):
         The input parameter "config" (dictionary) contains the sampled configurations passed by the bohb optimizer
         """
 
-        model = Sequential()
-
-        model.add(
-            Conv2D(
-                config["num_filters_1"],
-                kernel_size=(3, 3),
-                activation="relu",
-                input_shape=self.input_shape,
-            )
+        inputs = Input(
+            shape=(self.sequence_length, self.n_dims), batch_size=self.batch_size
         )
-        model.add(MaxPooling2D(pool_size=(2, 2)))
+        x = inputs
+        x = LSTM(
+            units=self.n_dims,
+            return_sequences=False,
+            stateful=True,
+            activation=config["activation"],
+            recurrent_activation=config["recurrent_activation"],
+            # kernel_regularizer=kernel_regularizer,
+            # bias_regularizer=bias_regularizer,
+            # activity_regularizer=activity_regularizer,
+            dropout=config["dropout"],
+            recurrent_dropout=config["recurrent_dropout"],
+        )(x)
 
-        if config["num_conv_layers"] > 1:
-            model.add(
-                Conv2D(
-                    config["num_filters_2"],
-                    kernel_size=(3, 3),
-                    activation="relu",
-                    input_shape=self.input_shape,
-                )
-            )
-            model.add(MaxPooling2D(pool_size=(2, 2)))
+        x = RepeatVector(self.sequence_length)(x)
+        x = LSTM(
+            units=self.n_dims,
+            stateful=True,
+            return_sequences=True,
+            # bias_initializer=global_mean_bias,
+            unit_forget_bias=False,
+            activation=config["activation_decoder"],
+            recurrent_activation=config["recurrent_activation_decoder"],
+            # kernel_regularizer=kernel_regularizer,
+            # bias_regularizer=bias_regularizer,
+            # activity_regularizer=activity_regularizer,
+            dropout=config["dropout"],
+            recurrent_dropout=config["recurrent_dropout"],
+        )(x)
 
-        if config["num_conv_layers"] > 2:
-            model.add(
-                Conv2D(
-                    config["num_filters_3"],
-                    kernel_size=(3, 3),
-                    activation="relu",
-                    input_shape=self.input_shape,
-                )
-            )
-            model.add(MaxPooling2D(pool_size=(2, 2)))
+        outputs = x
 
-        model.add(Dropout(config["dropout_rate"]))
-        model.add(Flatten())
-        model.add(Dense(config["num_fc_units"], activation="relu"))
-        model.add(Dropout(config["dropout_rate"]))
-        model.add(Dense(self.num_classes, activation="softmax"))
+        model = Model(inputs, outputs)
 
         if config["optimizer"] == "Adam":
             optimizer = keras.optimizers.Adam(lr=config["lr"])
@@ -156,29 +141,34 @@ class KerasWorker(Worker):
             )
 
         model.compile(
-            loss=keras.losses.categorical_crossentropy,
+            loss=keras.losses.MeanSquaredError(),
             optimizer=optimizer,
-            metrics=["accuracy"],
+            metrics=[tf.keras.metrics.MeanSquaredError()],
         )
 
         model.fit(
             self.x_train,
-            self.y_train,
+            self.x_train,
             batch_size=self.batch_size,
             epochs=int(budget),
-            verbose=0,
-            validation_data=(self.x_test, self.y_test),
+            verbose=1,
+            validation_data=(self.x_test, self.x_test),
         )
 
-        train_score = model.evaluate(self.x_train, self.y_train, verbose=0)
-        val_score = model.evaluate(self.x_validation, self.y_validation, verbose=0)
-        test_score = model.evaluate(self.x_test, self.y_test, verbose=0)
+        # train_score = model.predict(self.x_train, self.x_train, batch_size=self.batch_size)
+        # val_score = model.predict(self.x_test, self.x_test, batch_size=self.batch_size)
+        train_score = model.evaluate(
+            self.x_train, self.x_train, batch_size=self.batch_size, verbose=0
+        )
+
+        val_score = model.evaluate(
+            self.x_test, self.x_test, batch_size=self.batch_size, verbose=0
+        )
 
         # import IPython; IPython.embed()
         return {
-            "loss": 1 - val_score[1],  # remember: HpBandSter always minimizes!
+            "loss": val_score[1],  # remember: HpBandSter always minimizes!
             "info": {
-                "test accuracy": test_score[1],
                 "train accuracy": train_score[1],
                 "validation accuracy": val_score[1],
                 "number of parameters": model.count_params(),
@@ -202,40 +192,66 @@ class KerasWorker(Worker):
         # For demonstration purposes, we add different optimizers as categorical hyperparameters.
         # To show how to use conditional hyperparameters with ConfigSpace, we'll add the optimizers 'Adam' and 'SGD'.
         # SGD has a different parameter 'momentum'.
+        activation = CSH.CategoricalHyperparameter("activation", ["relu", "sigmoid"])
+        activation_decoder = CSH.CategoricalHyperparameter(
+            "activation_decoder", ["relu", "sigmoid"]
+        )
+
+        recurrent_activation = CSH.CategoricalHyperparameter(
+            "recurrent_activation", ["sigmoid", "tanh"]
+        )
+        recurrent_activation_decoder = CSH.CategoricalHyperparameter(
+            "recurrent_activation_decoder", ["sigmoid", "tanh"]
+        )
+
         optimizer = CSH.CategoricalHyperparameter("optimizer", ["Adam", "SGD"])
 
         sgd_momentum = CSH.UniformFloatHyperparameter(
             "sgd_momentum", lower=0.0, upper=0.99, default_value=0.9, log=False
         )
 
-        cs.add_hyperparameters([lr, optimizer, sgd_momentum])
-
-        num_conv_layers = CSH.UniformIntegerHyperparameter(
-            "num_conv_layers", lower=1, upper=3, default_value=2
-        )
-
-        num_filters_1 = CSH.UniformIntegerHyperparameter(
-            "num_filters_1", lower=4, upper=64, default_value=16, log=True
-        )
-        num_filters_2 = CSH.UniformIntegerHyperparameter(
-            "num_filters_2", lower=4, upper=64, default_value=16, log=True
-        )
-        num_filters_3 = CSH.UniformIntegerHyperparameter(
-            "num_filters_3", lower=4, upper=64, default_value=16, log=True
-        )
-
         cs.add_hyperparameters(
-            [num_conv_layers, num_filters_1, num_filters_2, num_filters_3]
+            [
+                lr,
+                activation,
+                activation_decoder,
+                recurrent_activation,
+                recurrent_activation_decoder,
+                optimizer,
+                sgd_momentum,
+            ]
         )
 
-        dropout_rate = CSH.UniformFloatHyperparameter(
-            "dropout_rate", lower=0.0, upper=0.9, default_value=0.5, log=False
-        )
-        num_fc_units = CSH.UniformIntegerHyperparameter(
-            "num_fc_units", lower=8, upper=256, default_value=32, log=True
+        dropout = CSH.UniformFloatHyperparameter(
+            "dropout", lower=0.0, upper=0.3, default_value=0.0
         )
 
-        cs.add_hyperparameters([dropout_rate, num_fc_units])
+        recurrent_dropout = CSH.UniformFloatHyperparameter(
+            "recurrent_dropout", lower=0.0, upper=0.3, default_value=0.0
+        )
+
+        # num_filters_1 = CSH.UniformIntegerHyperparameter(
+        #     "num_filters_1", lower=4, upper=64, default_value=16, log=True
+        # )
+        # num_filters_2 = CSH.UniformIntegerHyperparameter(
+        #     "num_filters_2", lower=4, upper=64, default_value=16, log=True
+        # )
+        # num_filters_3 = CSH.UniformIntegerHyperparameter(
+        #     "num_filters_3", lower=4, upper=64, default_value=16, log=True
+        # )
+
+        # cs.add_hyperparameters(
+        #     [num_conv_layers, num_filters_1, num_filters_2, num_filters_3]
+        # )
+
+        # dropout_rate = CSH.UniformFloatHyperparameter(
+        #     "dropout_rate", lower=0.0, upper=0.9, default_value=0.5, log=False
+        # )
+        # num_fc_units = CSH.UniformIntegerHyperparameter(
+        #     "num_fc_units", lower=8, upper=256, default_value=32, log=True
+        # )
+
+        cs.add_hyperparameters([dropout, recurrent_dropout])
 
         # The hyperparameter sgd_momentum will be used,if the configuration
         # contains 'SGD' as optimizer.
@@ -243,11 +259,11 @@ class KerasWorker(Worker):
         cs.add_condition(cond)
 
         # You can also use inequality conditions:
-        cond = CS.GreaterThanCondition(num_filters_2, num_conv_layers, 1)
-        cs.add_condition(cond)
+        # cond = CS.GreaterThanCondition(num_filters_2, num_conv_layers, 1)
+        # cs.add_condition(cond)
 
-        cond = CS.GreaterThanCondition(num_filters_3, num_conv_layers, 2)
-        cs.add_condition(cond)
+        # cond = CS.GreaterThanCondition(num_filters_3, num_conv_layers, 2)
+        # cs.add_condition(cond)
 
         return cs
 
@@ -258,5 +274,9 @@ if __name__ == "__main__":
 
     config = cs.sample_configuration().get_dictionary()
     print(config)
-    res = worker.compute(config=config, budget=1, working_directory=".")
+    res = worker.compute(
+        config=config,
+        budget=5,
+        working_directory="/home/paperspace/hyperparameter-optimization/HpBandSter",
+    )
     print(res)
