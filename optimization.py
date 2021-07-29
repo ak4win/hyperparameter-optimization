@@ -41,11 +41,11 @@ plot = plotter.Plotter("model", plt)
 
 # choose your model you want to optimize
 # "CBN-VAE" or "RNN"
-the_model = "RNN"
+the_model = "CBN-VAE"
 
 # choose an optimization method "RS" = Random Search, "BO" == Bayesian Optimization,
 # "HB" = Hyperband, "HpBandster" == BOHB method
-the_optimization_method = "HpBandSter"
+the_optimization_method = "HB"
 smoothing_true = True
 epochs = 32
 
@@ -158,7 +158,7 @@ else:
         "HB": Hyperband(
             create_model,  # model instance, whose hyper-parameters are optimized
             objective="val_loss",  # the direction of the optimization
-            max_epochs=2,  # the max. amount of model configurations that are tested
+            max_epochs=1,  # the max. amount of model configurations that are tested
             factor=3,  # reduction factor for the number of epochs and number of models for each bracket
             hyperband_iterations=1,  # number of times to iterate over the full Hyperband algorithm
             executions_per_trial=1,  # how many rounds the model with that configuration is trained to reduce variance
@@ -177,27 +177,26 @@ else:
         monitor="val_loss", patience=3, restore_best_weights=True
     )
 
-    tensorboard_log = tf.keras.callbacks.TensorBoard(
-        f"save_results/{the_model}/{the_optimization_method}/tensorboard_logs"
-    )
-
-    setup_tb(tuner)
-
     optimization = tuner.search(
         x_train,
         x_train,
         epochs=epochs,
         validation_data=(x_test, x_test),
-        callbacks=[stop_early, tensorboard_log],
+        callbacks=[stop_early],
         batch_size=batch_size,
+    )
+    best_hp = tuner.get_best_hyperparameters()[0]
+
+    print(
+        f"The best hyperparameter configuration with {the_model} and the optimization method: {the_optimization_method} is {best_hp.values}"
     )
 
     best_model = tuner.get_best_models()[0]
 
-    tf.keras.models.save_model(best_model, file_path, overwrite=True)
+    # tf.keras.models.save_model(best_model, file_path, overwrite=True)
 
     history, train_preds, test_preds, model_after_training = train_best_model(
-        the_model, x_train, x_test, batch_size, epochs=40
+        best_model, x_train, x_test, batch_size, epochs=40
     )
 
     tf.keras.models.save_model(model_after_training, file_path, overwrite=True)

@@ -1,16 +1,13 @@
 import tensorflow as tf
 
 
-def train_best_model(model_category, x_train, x_test, batch_size, epochs):
-    model = tf.keras.models.load_model(
-        f"/home/paperspace/hyperparameter-optimization/save_models/{model_category}"
-    )
+def train_best_model(best_model, x_train, x_test, batch_size, epochs):
 
     stop_early = tf.keras.callbacks.EarlyStopping(
         monitor="val_loss", patience=3, restore_best_weights=True
     )
 
-    history = model.fit(
+    history = best_model.fit(
         x_train,
         x_train,
         batch_size,
@@ -20,7 +17,7 @@ def train_best_model(model_category, x_train, x_test, batch_size, epochs):
         callbacks=stop_early,
     ).history
 
-    train_preds = model.predict(x_train, batch_size=batch_size)
-    test_preds = model.predict(x_test, batch_size=batch_size)
+    train_preds = best_model.predict(x_train, batch_size=batch_size)
+    test_preds = best_model.predict(x_test, batch_size=batch_size)
 
-    return history, train_preds, test_preds, model
+    return history, train_preds, test_preds, best_model

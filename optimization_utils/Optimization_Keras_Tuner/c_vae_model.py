@@ -31,7 +31,7 @@ from global_utils.layers.sampling import sample_from_latent_space
 def create_model_c_vae(hp):
 
     sample_size = 120
-    batch_size = 32
+    batch_size = 1
 
     encoder_activation = hp.Choice("encoder_activation", ["relu", "tanh", "sigmoid"])
     decoder_activation = hp.Choice("decoder_activation", ["relu", "tanh", "sigmoid"])
