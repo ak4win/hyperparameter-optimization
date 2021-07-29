@@ -49,7 +49,6 @@ import keras
 from keras.models import Model
 from keras.layers import Input, RepeatVector
 from keras.layers import LSTM
-from keras import backend as K
 
 
 import ConfigSpace as CS
@@ -146,6 +145,14 @@ class KerasWorker(Worker):
             metrics=[tf.keras.metrics.MeanSquaredError()],
         )
 
+        stop_early = tf.keras.callbacks.EarlyStopping(
+            monitor="val_loss", patience=3, restore_best_weights=True
+        )
+
+        tensorboard_log = tf.keras.callbacks.TensorBoard(
+            "save_results/RNN/HpBandSter/tensorboard_logs"
+        )
+
         model.fit(
             self.x_train,
             self.x_train,
@@ -153,6 +160,7 @@ class KerasWorker(Worker):
             epochs=int(budget),
             verbose=1,
             validation_data=(self.x_test, self.x_test),
+            callbacks=[stop_early, tensorboard_log],
         )
 
         # train_score = model.predict(self.x_train, self.x_train, batch_size=self.batch_size)
@@ -277,6 +285,6 @@ if __name__ == "__main__":
     res = worker.compute(
         config=config,
         budget=5,
-        working_directory="/home/paperspace/hyperparameter-optimization/HpBandSter",
+        working_directory="/home/paperspace/hyperparameter-optimization/Optimization_HpBandSter/RNN",
     )
     print(res)
