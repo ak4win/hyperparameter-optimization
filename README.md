@@ -11,7 +11,7 @@ run poetry install to install dependencies into your environment
 ## Get Dataset
 
 Download the [Intel Data Lab Dataset](http://db.csail.mit.edu/labdata/data.txt.gz)
-and set the "data_path" argument at read_and_preprocess_data accordingly.
+and set the "data_path" argument at [read_and_preprocess_data](https://github.com/ak4win/hyperparameter-optimization/blob/master/global_utils/get_data_multi_note.py) accordingly.
 
 ## run an experiment
 
