@@ -15,5 +15,5 @@ and set the "data_path" argument at [read_and_preprocess_data](https://github.co
 
 ## run an experiment
 
-set the variables you want at the [optimization.py](https://github.com/ak4win/hyperparameter-optimization/blob/master/optimization.py) file and run the experiment by entering by runing optimization.py with the command
+set the variables you want at the [optimization.py](https://github.com/ak4win/hyperparameter-optimization/blob/master/optimization.py) and start the experiment by running the optimization.py file with the command
 python optimization.py
