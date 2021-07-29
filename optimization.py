@@ -28,8 +28,6 @@ import matplotlib.pyplot as plt
 # hyper-parameter optimization
 from keras_tuner import RandomSearch, BayesianOptimization, Hyperband
 
-from kerastuner_tensorboard_logger import setup_tb
-
 # own modules layers
 from global_utils.get_data_multi_note import read_and_preprocess_data
 from global_utils.evaluation import smooth_output
@@ -70,9 +68,10 @@ if the_optimization_method == "HpBandSter":
     res = worker.compute(
         config=config,
         budget=5,
-        working_directory=f"/home/paperspace/hyperparameter-optimization/{the_optimization_method}/RNN",
+        working_directory=f"/home/paperspace/hyperparameter-optimization/{the_optimization_method}/{the_model}",
     )
     print(res)
+
 else:
     # check for model
     if the_model == "RNN":
@@ -158,9 +157,9 @@ else:
         "HB": Hyperband(
             create_model,  # model instance, whose hyper-parameters are optimized
             objective="val_loss",  # the direction of the optimization
-            max_epochs=1,  # the max. amount of model configurations that are tested
+            max_epochs=15,  # the max. amount of model configurations that are tested
             factor=3,  # reduction factor for the number of epochs and number of models for each bracket
-            hyperband_iterations=1,  # number of times to iterate over the full Hyperband algorithm
+            hyperband_iterations=3,  # number of times to iterate over the full Hyperband algorithm
             executions_per_trial=1,  # how many rounds the model with that configuration is trained to reduce variance
             # seed=1,  # set the seed
             overwrite=True,  # boolean whether to overwrite the project
@@ -187,13 +186,7 @@ else:
     )
     best_hp = tuner.get_best_hyperparameters()[0]
 
-    print(
-        f"The best hyperparameter configuration with {the_model} and the optimization method: {the_optimization_method} is {best_hp.values}"
-    )
-
     best_model = tuner.get_best_models()[0]
-
-    # tf.keras.models.save_model(best_model, file_path, overwrite=True)
 
     history, train_preds, test_preds, model_after_training = train_best_model(
         best_model, x_train, x_test, batch_size, epochs=40
@@ -202,7 +195,14 @@ else:
     tf.keras.models.save_model(model_after_training, file_path, overwrite=True)
 
     diff, evaluation = smooth_output(x_test, test_preds, smoothing_window=3)
-    print(evaluation)
+
+    print(
+        f"The best hyperparameter configuration with {the_model} and the optimization method: {the_optimization_method} is {best_hp.values}"
+    )
+
+    print(
+        f"The percentage-RMS-difference for the configuration after the re-training equals to {evaluation}"
+    )
 
     plt.plot(x_test.reshape(-1)[3000:4000], label="test-data")
     plt.plot(diff[3000:4000], label="reconstruction")
