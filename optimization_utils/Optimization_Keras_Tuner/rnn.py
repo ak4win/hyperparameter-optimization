@@ -61,7 +61,7 @@ def create_model_rnn(hp):
 
     model.compile(
         optimizer=Adam(hp.Choice("learning_rate", values=[1e-2, 1e-3, 1e-4])),
-        loss=hp.Choice("loss_function", hp.Choice("loss_function", ["mse", "mae", "msle"])),
+        loss=hp.Choice("loss_function", hp.Choice("loss_function", ["mse"])),
         metrics=[tf.keras.metrics.MeanSquaredError()],
     )
 

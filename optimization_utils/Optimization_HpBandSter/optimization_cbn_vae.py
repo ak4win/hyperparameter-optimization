@@ -1,7 +1,7 @@
 """
-Example 5 - MNIST
+HpBandSter Optimization Downsampling-Convolutional Restricted Boltzmann Machines Variational Auto-Encoder
 =================
-Small CNN for MNIST implementet in both Keras and PyTorch.
+CBN-VAE model of our research project is optimized by the HpBandSter Methdod.
 This example also shows how to log results to disk during the optimization
 which is useful for long runs, because intermediate results are directly available
 for analysis. It also contains a more realistic search space with different types
@@ -20,11 +20,15 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
-from Optimization_HpBandSter.worker_rnn import KerasWorker as worker
+from optimization_utils.Optimization_HpBandSter.worker_cbn_vae import (
+    KerasWorker as worker,
+)
 
 
 def create_arguments():
-    parser = argparse.ArgumentParser(description="Example 5 - CNN on MNIST")
+    parser = argparse.ArgumentParser(
+        description="CBN-VAE model of our research project is optimized by the HpBandSter Methdod."
+    )
     parser.add_argument(
         "--min_budget",
         type=float,
@@ -61,7 +65,7 @@ def create_arguments():
         "--shared_directory",
         type=str,
         help="A directory that is accessible for all processes, e.g. a NFS share.",
-        default=".",
+        default="save_results/CBN_VAE/HpBandSter",
     )
     parser.add_argument(
         "--backend",

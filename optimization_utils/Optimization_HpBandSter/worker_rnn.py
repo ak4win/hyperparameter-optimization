@@ -1,46 +1,42 @@
 """
-Worker for Example 5 - Keras
-============================
-In this example implements a small CNN in Keras to train it on MNIST.
-The configuration space shows the most common types of hyperparameters and
+LSTM-RNN-Auto-Encoder
+=================
+Optimization of the LSTM-RNN Model which is implemented
+in our research project.
+
+The configuration space shows the types of hyperparameters and
 even contains conditional dependencies.
+
 We'll optimise the following hyperparameters:
-+-------------------------+----------------+-----------------+------------------------+
-| Parameter Name          | Parameter type |  Range/Choices  | Comment                |
-+=========================+================+=================+========================+
-| Learning rate           |  float         | [1e-6, 1e-2]    | varied logarithmically |
-+-------------------------+----------------+-----------------+------------------------+
-| Optimizer               | categorical    | {Adam, SGD }    | discrete choice        |
-+-------------------------+----------------+-----------------+------------------------+
-| SGD momentum            |  float         | [0, 0.99]       | only active if         |
-|                         |                |                 | optimizer == SGD       |
-+-------------------------+----------------+-----------------+------------------------+
-| Number of conv layers   | integer        | [1,3]           | can only take integer  |
-|                         |                |                 | values 1, 2, or 3      |
-+-------------------------+----------------+-----------------+------------------------+
-| Number of filters in    | integer        | [4, 64]         | logarithmically varied |
-| the first conf layer    |                |                 | integer values         |
-+-------------------------+----------------+-----------------+------------------------+
-| Number of filters in    | integer        | [4, 64]         | only active if number  |
-| the second conf layer   |                |                 | of layers >= 2         |
-+-------------------------+----------------+-----------------+------------------------+
-| Number of filters in    | integer        | [4, 64]         | only active if number  |
-| the third conf layer    |                |                 | of layers == 3         |
-+-------------------------+----------------+-----------------+------------------------+
-| Dropout rate            |  float         | [0, 0.9]        | standard continuous    |
-|                         |                |                 | parameter              |
-+-------------------------+----------------+-----------------+------------------------+
-| Number of hidden units  | integer        | [8,256]         | logarithmically varied |
-| in fully connected layer|                |                 | integer values         |
-+-------------------------+----------------+-----------------+------------------------+
++-------------------------+----------------+----------------------+------------------------+
+| Parameter Name          | Parameter type |  Range/Choices       | Comment                |
++=========================+================+======================+========================+
+| Learning rate           | float          | [1e-6, 1e-2]         | varied logarithmically |
++-------------------------+----------------+----------------------+------------------------+
+| Optimizer               | categorical    | {Adam, SGD}          | discrete choice        |
++-------------------------+----------------+----------------------+------------------------+
+| SGD momentum            | float          | [0, 0.99]            | only active if         |
+|                         |                |                      | optimizer == SGD       |
++-------------------------+----------------+----------------------+------------------------+
+| dropout rate encoder    | float          | [0, 0.3]             | continuous value       |
+| and decoder             |                |                      |                        |
++-------------------------+----------------+----------------------+------------------------+
+| recurrent dropout rate  | float          | [0, 0.3]             | continuous value       |
+| encoder and decoder     |                |                      |                        |
++-------------------------+----------------+----------------------+------------------------+
+| encoder activation      | categorical    | {ReLu, tanh, sigmoid}| discrete choice        |
++-------------------------+----------------+----------------------+------------------------+
+| decoder activation      | categorical    | {ReLu, tanh, sigmoid}| discrete choice        |
++-------------------------+----------------+----------------------+------------------------+
+| recurrent encoder       | categorical    | {ReLu, tanh, sigmoid}| discrete choice        |
+| activation              |                |                      |                        |
++-------------------------+----------------+----------------------+------------------------+
+| recurrent decoder       | categorical    | {ReLu, tanh, sigmoid}| discrete choice        |
+| activation              |                |                      |                        |
++-------------------------+----------------+----------------------+------------------------+
+
 Please refer to the compute method below to see how those are defined using the
 ConfigSpace package.
-
-The network does not achieve stellar performance when a random configuration is samples,
-but a few iterations should yield an accuracy of >90%. To speed up training, only
-8192 images are used for training, 1024 for validation.
-The purpose is not to achieve state of the art on MNIST, but to show how to use
-Keras inside HpBandSter, and to demonstrate a more complicated search space.
 """
 
 import tensorflow as tf
@@ -103,8 +99,8 @@ class KerasWorker(Worker):
             units=self.n_dims,
             return_sequences=False,
             stateful=True,
-            activation=config["activation"],
-            recurrent_activation=config["recurrent_activation"],
+            activation=config["encoder_activation"],
+            recurrent_activation=config["recurrent_activation_encoder"],
             # kernel_regularizer=kernel_regularizer,
             # bias_regularizer=bias_regularizer,
             # activity_regularizer=activity_regularizer,
@@ -197,23 +193,23 @@ class KerasWorker(Worker):
             "lr", lower=1e-6, upper=1e-1, default_value="1e-2", log=True
         )
 
-        # For demonstration purposes, we add different optimizers as categorical hyperparameters.
-        # To show how to use conditional hyperparameters with ConfigSpace, we'll add the optimizers 'Adam' and 'SGD'.
-        # SGD has a different parameter 'momentum'.
-        activation = CSH.CategoricalHyperparameter("activation", ["relu", "sigmoid"])
+        encoder_activation = CSH.CategoricalHyperparameter(
+            "encoder_activation", ["relu", "sigmoid", "tanh"]
+        )
         activation_decoder = CSH.CategoricalHyperparameter(
-            "activation_decoder", ["relu", "sigmoid"]
+            "activation_decoder", ["relu", "sigmoid", "tanh"]
         )
 
-        recurrent_activation = CSH.CategoricalHyperparameter(
-            "recurrent_activation", ["sigmoid", "tanh"]
+        recurrent_activation_encoder = CSH.CategoricalHyperparameter(
+            "recurrent_activation_encoder", ["relu", "sigmoid", "tanh"]
         )
         recurrent_activation_decoder = CSH.CategoricalHyperparameter(
-            "recurrent_activation_decoder", ["sigmoid", "tanh"]
+            "recurrent_activation_decoder", ["relu", "sigmoid", "tanh"]
         )
 
         optimizer = CSH.CategoricalHyperparameter("optimizer", ["Adam", "SGD"])
 
+        # SGD has a different parameter 'momentum'.
         sgd_momentum = CSH.UniformFloatHyperparameter(
             "sgd_momentum", lower=0.0, upper=0.99, default_value=0.9, log=False
         )
@@ -221,9 +217,9 @@ class KerasWorker(Worker):
         cs.add_hyperparameters(
             [
                 lr,
-                activation,
+                encoder_activation,
                 activation_decoder,
-                recurrent_activation,
+                recurrent_activation_encoder,
                 recurrent_activation_decoder,
                 optimizer,
                 sgd_momentum,
@@ -238,40 +234,12 @@ class KerasWorker(Worker):
             "recurrent_dropout", lower=0.0, upper=0.3, default_value=0.0
         )
 
-        # num_filters_1 = CSH.UniformIntegerHyperparameter(
-        #     "num_filters_1", lower=4, upper=64, default_value=16, log=True
-        # )
-        # num_filters_2 = CSH.UniformIntegerHyperparameter(
-        #     "num_filters_2", lower=4, upper=64, default_value=16, log=True
-        # )
-        # num_filters_3 = CSH.UniformIntegerHyperparameter(
-        #     "num_filters_3", lower=4, upper=64, default_value=16, log=True
-        # )
-
-        # cs.add_hyperparameters(
-        #     [num_conv_layers, num_filters_1, num_filters_2, num_filters_3]
-        # )
-
-        # dropout_rate = CSH.UniformFloatHyperparameter(
-        #     "dropout_rate", lower=0.0, upper=0.9, default_value=0.5, log=False
-        # )
-        # num_fc_units = CSH.UniformIntegerHyperparameter(
-        #     "num_fc_units", lower=8, upper=256, default_value=32, log=True
-        # )
-
         cs.add_hyperparameters([dropout, recurrent_dropout])
 
-        # The hyperparameter sgd_momentum will be used,if the configuration
+        # The hyperparameter sgd_momentum will be used, if the configuration
         # contains 'SGD' as optimizer.
         cond = CS.EqualsCondition(sgd_momentum, optimizer, "SGD")
         cs.add_condition(cond)
-
-        # You can also use inequality conditions:
-        # cond = CS.GreaterThanCondition(num_filters_2, num_conv_layers, 1)
-        # cs.add_condition(cond)
-
-        # cond = CS.GreaterThanCondition(num_filters_3, num_conv_layers, 2)
-        # cs.add_condition(cond)
 
         return cs
 

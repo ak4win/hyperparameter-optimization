@@ -140,7 +140,7 @@ def create_model_c_vae(hp):
 
     model.compile(
         optimizer=Adam(hp.Choice("learning_rate", values=[1e-2, 1e-3, 1e-4])),
-        loss=hp.Choice("loss_function", hp.Choice("loss_function", ["mse", "mae"])),
+        loss=hp.Choice("loss_function", hp.Choice("loss_function", ["mse"])),
         metrics=[tf.keras.metrics.MeanSquaredError()],
     )
 

@@ -1,46 +1,37 @@
 """
-Worker for Example 5 - Keras
+HpBandSter Optimization Downsampling-Convolutional
+Restricted Boltzmann Machines Variational Auto-Encoder
 ============================
-In this example implements a small CNN in Keras to train it on MNIST.
-The configuration space shows the most common types of hyperparameters and
+CBN-VAE model of our research project is optimized
+by the HpBandSter Methdod.
+
+The configuration space shows the types of hyperparameters and
 even contains conditional dependencies.
+
 We'll optimise the following hyperparameters:
-+-------------------------+----------------+-----------------+------------------------+
-| Parameter Name          | Parameter type |  Range/Choices  | Comment                |
-+=========================+================+=================+========================+
-| Learning rate           |  float         | [1e-6, 1e-2]    | varied logarithmically |
-+-------------------------+----------------+-----------------+------------------------+
-| Optimizer               | categorical    | {Adam, SGD }    | discrete choice        |
-+-------------------------+----------------+-----------------+------------------------+
-| SGD momentum            |  float         | [0, 0.99]       | only active if         |
-|                         |                |                 | optimizer == SGD       |
-+-------------------------+----------------+-----------------+------------------------+
-| Number of conv layers   | integer        | [1,3]           | can only take integer  |
-|                         |                |                 | values 1, 2, or 3      |
-+-------------------------+----------------+-----------------+------------------------+
-| Number of filters in    | integer        | [4, 64]         | logarithmically varied |
-| the first conf layer    |                |                 | integer values         |
-+-------------------------+----------------+-----------------+------------------------+
-| Number of filters in    | integer        | [4, 64]         | only active if number  |
-| the second conf layer   |                |                 | of layers >= 2         |
-+-------------------------+----------------+-----------------+------------------------+
-| Number of filters in    | integer        | [4, 64]         | only active if number  |
-| the third conf layer    |                |                 | of layers == 3         |
-+-------------------------+----------------+-----------------+------------------------+
-| Dropout rate            |  float         | [0, 0.9]        | standard continuous    |
-|                         |                |                 | parameter              |
-+-------------------------+----------------+-----------------+------------------------+
-| Number of hidden units  | integer        | [8,256]         | logarithmically varied |
-| in fully connected layer|                |                 | integer values         |
-+-------------------------+----------------+-----------------+------------------------+
++-------------------------+----------------+----------------------+------------------------+
+| Parameter Name          | Parameter type |  Range/Choices       | Comment                |
++=========================+================+======================+========================+
+| Learning rate           |  float         | [1e-6, 1e-2]         | varied logarithmically |
++-------------------------+----------------+----------------------+------------------------+
+| Optimizer               | categorical    | {Adam, SGD}          | discrete choice        |
++-------------------------+----------------+----------------------+------------------------+
+| SGD momentum            |  float         | [0, 0.99]            | only active if         |
+|                         |                |                      | optimizer == SGD       |
++-------------------------+----------------+----------------------+------------------------+
+| Number dense nodes      | integer        | [5,40]               | can only take integer  |
+|                         |                |                      | values from 5 to 40    |
++-------------------------+----------------+----------------------+------------------------+
+| encoder activation      | categorical    | {ReLu, tanh, sigmoid}| discrete choice        |
++-------------------------+----------------+----------------------+------------------------+
+| decoder activation      | categorical    | {ReLu, tanh, sigmoid}| discrete choice        |
++-------------------------+----------------+----------------------+------------------------+
+| bottleneck activation   | categorical    | {ReLu, tanh, sigmoid}| discrete choice        |
++-------------------------+----------------+----------------------+------------------------+
+
 Please refer to the compute method below to see how those are defined using the
 ConfigSpace package.
 
-The network does not achieve stellar performance when a random configuration is samples,
-but a few iterations should yield an accuracy of >90%. To speed up training, only
-8192 images are used for training, 1024 for validation.
-The purpose is not to achieve state of the art on MNIST, but to show how to use
-Keras inside HpBandSter, and to demonstrate a more complicated search space.
 """
 from numpy.random import seed
 
@@ -95,8 +86,7 @@ class KerasWorker(Worker):
             motes_train=[7],
             motes_test=[7],
         )
-        print(x_train.shape)
-        print(x_test.shape)
+
         self.x_train = x_train[:310, :, :]
         self.x_test = x_test[310:, :, :]
 
@@ -284,9 +274,6 @@ class KerasWorker(Worker):
             "lr", lower=1e-6, upper=1e-1, default_value="1e-2", log=True
         )
 
-        # For demonstration purposes, we add different optimizers as categorical hyperparameters.
-        # To show how to use conditional hyperparameters with ConfigSpace, we'll add the optimizers 'Adam' and 'SGD'.
-        # SGD has a different parameter 'momentum'.
         encoder_activation = CSH.CategoricalHyperparameter(
             "encoder_activation", ["relu", "sigmoid", "tanh"]
         )
@@ -298,6 +285,7 @@ class KerasWorker(Worker):
             "bottleneck_activation", ["relu", "sigmoid", "tanh"]
         )
 
+        # SGD has a different parameter 'momentum'. Coniditonal parameter if SGD is true
         optimizer = CSH.CategoricalHyperparameter("optimizer", ["Adam", "SGD"])
 
         sgd_momentum = CSH.UniformFloatHyperparameter(

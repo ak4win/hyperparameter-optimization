@@ -1,3 +1,16 @@
+""""
+hyper-parameter optimization methods Random Search, Bayesian Optimization,
+Hyperband and BOHB for the models LSTM-RNN-AE and CBN-VAE
+=================
+The following variables can be adjusted, just copy and past the content and set it as argument
++-------------------------+---------------------------------------------------------+------------------------+
+| Models                  | possible Optimization method for the Model              |  Range/Choices         |
++=========================+================+========================================+------------------------+
+| "CBN-VAE", "RNN"        | "RS" = Random Search, "BO" == Bayesian Optimization,    |  discrete choice       |
+|                         | "HB" = Hyperband, "HpBandster" == BOHB method           |                        |
++-------------------------+---------------------------------------------------------+------------------------+
+"""
+
 # Set the seed
 from numpy.random import seed
 
@@ -21,26 +34,39 @@ from kerastuner_tensorboard_logger import setup_tb
 from global_utils.get_data_multi_note import read_and_preprocess_data
 from global_utils.evaluation import smooth_output
 from global_utils.train_model import train_best_model
-from models.c_vae_model import create_model_c_vae
-from models.rnn import create_model_rnn
 import global_utils.plotter as plotter
 
+# prepare Plot module for visulization
 plot = plotter.Plotter("model", plt)
 
-the_model = "RNN"  # or CBN_VAE
+# choose your model you want to optimize
+# "CBN-VAE" or "RNN"
+the_model = "RNN"
+
+# choose an optimization method "RS" = Random Search, "BO" == Bayesian Optimization,
+# "HB" = Hyperband, "HpBandster" == BOHB method
 the_optimization_method = "HpBandSter"
 smoothing_true = True
 epochs = 32
 
+# check for the optimization method
 if the_optimization_method == "HpBandSter":
+    # check for the model
     if the_model == "RNN":
-        from Optimization_HpBandSter.worker_rnn import KerasWorker
+        # import corresponding model
+        from optimization_utils.Optimization_HpBandSter.worker_rnn import KerasWorker
     else:
-        from Optimization_HpBandSter.worker_cbn_vae import KerasWorker
+        # import corresponding model
+        from optimization_utils.Optimization_HpBandSter.worker_cbn_vae import (
+            KerasWorker,
+        )
+    # create worker
     worker = KerasWorker(run_id="0")
+    # get configspace for corresponding model
     cs = worker.get_configspace()
     config = cs.sample_configuration().get_dictionary()
     print(config)
+    # start worker
     res = worker.compute(
         config=config,
         budget=5,
@@ -48,8 +74,12 @@ if the_optimization_method == "HpBandSter":
     )
     print(res)
 else:
+    # check for model
     if the_model == "RNN":
+        # import corresponding model
+        from optimization_utils.Optimization_Keras_Tuner.rnn import create_model_rnn
 
+        # set variables for Model, Model utils and Optimization
         batch_size = 1
         sequence_length = 20
 
@@ -65,18 +95,38 @@ else:
             motes_test=[7],
         )
 
-        print(x_train.shape)
-        print(x_test.shape)
-
+        # split train and test data
         x_train = x_train[:1900, :, :]
         x_test = x_test[1900:, :, :]
 
+        # create model instance
         create_model = create_model_rnn
 
     else:
-        batch_size = 32
-        sample_size = 120
-        x_train, x_test = read_and_preprocess_data()
+        # import corresponding model
+        from optimization_utils.Optimization_Keras_Tuner.c_vae_model import (
+            create_model_c_vae,
+        )
+
+        # set variables for Model, Model utils and Optimization
+        sequence_length = 120
+        batch_size = 1
+
+        x_train, x_test = read_and_preprocess_data(
+            should_smooth=False,
+            smoothing_window=100,
+            sequence_length=sequence_length,
+            cut_off_min=5,
+            cut_off_max=45,
+            should_scale=True,
+            batch_size=batch_size,
+            motes_train=[7],
+            motes_test=[7],
+        )
+
+        x_train = x_train[:310, :, :]
+        x_test = x_test[310:, :, :]
+
         create_model = create_model_c_vae
 
     file_path = f"/home/paperspace/hyperparameter-optimization/save_models/{the_model}"
@@ -105,7 +155,7 @@ else:
             directory=f"save_results/{the_model}/bayesian",  # the relative path to the working directory
             project_name="results",
         ),
-        "HP": Hyperband(
+        "HB": Hyperband(
             create_model,  # model instance, whose hyper-parameters are optimized
             objective="val_loss",  # the direction of the optimization
             max_epochs=2,  # the max. amount of model configurations that are tested
@@ -146,20 +196,14 @@ else:
 
     tf.keras.models.save_model(best_model, file_path, overwrite=True)
 
-    # val_predictions = best_model.predict(x_test, batch_size=batch_size)
-
     history, train_preds, test_preds, model_after_training = train_best_model(
         the_model, x_train, x_test, batch_size, epochs=40
     )
 
     tf.keras.models.save_model(model_after_training, file_path, overwrite=True)
 
-    # if smoothing_true is True:
     diff, evaluation = smooth_output(x_test, test_preds, smoothing_window=3)
     print(evaluation)
-    # else:
-    # evaluation = per_rms_diff(x_test.reshape(-1), val_predictions)
-    # print(evaluation)
 
     plt.plot(x_test.reshape(-1)[3000:4000], label="test-data")
     plt.plot(diff[3000:4000], label="reconstruction")

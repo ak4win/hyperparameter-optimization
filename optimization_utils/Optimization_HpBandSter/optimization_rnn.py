@@ -1,7 +1,7 @@
 """
-Example 5 - MNIST
+LSTM-RNN-Auto-Encoder
 =================
-Small CNN for MNIST implementet in both Keras and PyTorch.
+Optimization of the LSTM-RNN Model which is implemented in our research project.
 This example also shows how to log results to disk during the optimization
 which is useful for long runs, because intermediate results are directly available
 for analysis. It also contains a more realistic search space with different types
@@ -19,7 +19,8 @@ from hpbandster.optimizers import BOHB
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
-from Optimization_HpBandSter.worker_cbn_vae import KerasWorker as worker
+
+from optimization_utils.Optimization_HpBandSter.worker_rnn import KerasWorker as worker
 
 
 def create_arguments():
@@ -60,7 +61,7 @@ def create_arguments():
         "--shared_directory",
         type=str,
         help="A directory that is accessible for all processes, e.g. a NFS share.",
-        default=".",
+        default="save_results/RNN/HpBandSter",
     )
     parser.add_argument(
         "--backend",
