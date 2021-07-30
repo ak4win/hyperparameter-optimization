@@ -5,8 +5,8 @@ In the repository we have implemented Random Search, Bayesian Optimiztion, Hyper
 ## relax and enjoy the optimization for your neural network but first things first, the setup:
 
 install [Poetry](https://python-poetry.org/docs/cli/):
-create and activate a virtual environment using python 3.7.10 as defined in the pyproject.toml
-run poetry install to install dependencies into your environment
+using python 3.7.10, run `poetry install` to install the correct dependencies.
+Poetry will take care of putting them into a seperate virtual environment.
 
 ## Get Dataset
 
@@ -15,5 +15,17 @@ and set the "data_path" argument at [read_and_preprocess_data](https://github.co
 
 ## run an experiment
 
-set the variables you want at the [optimization.py](https://github.com/ak4win/hyperparameter-optimization/blob/master/optimization.py) and start the experiment by running the optimization.py file with the command
+set the variables you want at the
+[optimization.py](https://github.com/ak4win/hyperparameter-optimization/blob/master/optimization.py)
+and start the experiment by running the optimization.py file with the command
+
+make sure you activate the virtualenv that was created by poetry beforehand, you
+can get the path of the virtualenv via this command
+
+```bash
+poetry env info --path
+```
+
+```bash
 python optimization.py
+```
