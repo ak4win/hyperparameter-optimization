@@ -38,21 +38,22 @@ We'll optimise the following hyperparameters:
 Please refer to the compute method below to see how those are defined using the
 ConfigSpace package.
 """
-
-from lib.create_rnn import create_model
-from global_utils.plot_sequence import plot_sequence
-from global_utils.plotter import Plotter
-import tensorflow as tf
-
-import ConfigSpace as CS
-import ConfigSpace.hyperparameters as CSH
-
-from hpbandster.core.worker import Worker
-
-from global_utils.get_data_multi_note import read_and_preprocess_data
-
-import matplotlib.pyplot as plt
+# from numpy.random import seed; seed(34)
+# import tensorflow as tf; tf.random.set_seed(39)
 import logging
+import matplotlib.pyplot as plt
+from global_utils.get_data_multi_note import read_and_preprocess_data
+from hpbandster.core.worker import Worker
+import ConfigSpace.hyperparameters as CSH
+import ConfigSpace as CS
+import tensorflow as tf
+from global_utils.plotter import Plotter
+from global_utils.plot_sequence import plot_sequence
+from lib.create_rnn import create_model
+import numpy as np
+seed = np.random.get_state()[1][0]
+
+
 logging.basicConfig(level=logging.WARNING)
 plotter = Plotter('debug_rnn', plt)
 
@@ -80,40 +81,52 @@ class KerasWorker(Worker):
             "save_results/RNN/HpBandSter/tensorboard_logs"
         )
 
-        model.fit(
-            self.x_train,
-            self.x_train,
-            batch_size=self.batch_size,
-            epochs=int(budget),
-            verbose=1,
-            validation_data=(self.x_test, self.x_test),
-            callbacks=[stop_early, tensorboard_log],
-        )
+        # In some cases weird errors occur, crashing the whole optimization process
+        # Thus wrap this in a try-t
+        try:
+            model.fit(
+                self.x_train,
+                self.x_train,
+                batch_size=self.batch_size,
+                epochs=int(budget),
+                verbose=1,
+                validation_data=(self.x_test, self.x_test),
+                callbacks=[stop_early, tensorboard_log],
+            )
 
-        plot_sequence((model.predict(self.x_train, batch_size=self.batch_size),
-                      'reconstruction'), (self.x_train, 'originial'))
-        plotter('train')
-        plot_sequence((model.predict(self.x_test, batch_size=self.batch_size),
-                      'reconstruction'), (self.x_test, 'originial'))
-        plotter('test')
+            plot_sequence((model.predict(self.x_train, batch_size=self.batch_size),
+                          'reconstruction'), (self.x_train, 'originial'))
+            plotter('train')
+            plot_sequence((model.predict(self.x_test, batch_size=self.batch_size),
+                          'reconstruction'), (self.x_test, 'originial'))
+            plotter('test')
 
-        train_score = model.evaluate(
-            self.x_train, self.x_train, batch_size=self.batch_size, verbose=0
-        )
+            train_score = model.evaluate(
+                self.x_train, self.x_train, batch_size=self.batch_size, verbose=0
+            )
 
-        val_score = model.evaluate(
-            self.x_test, self.x_test, batch_size=self.batch_size, verbose=0
-        )
+            val_score = model.evaluate(
+                self.x_test, self.x_test, batch_size=self.batch_size, verbose=0
+            )
 
-        # import IPython; IPython.embed()
-        return {
-            "loss": val_score,  # remember: HpBandSter always minimizes!
-            "info": {
-                "train loss": train_score,
-                "validation loss": val_score,
-                "number of parameters": model.count_params(),
-            },
-        }
+            # import IPython; IPython.embed()
+            return {
+                "loss": val_score,  # remember: HpBandSter always minimizes!
+                "info": {
+                    "train loss": train_score,
+                    "validation loss": val_score,
+                    "number of parameters": model.count_params(),
+                },
+            }
+        except Exception:
+            return {
+                "loss": float('inf'),
+                "info": {
+                    "train loss": float('inf'),
+                    "validation loss": float('inf'),
+                    "number of parameters": 1000000
+                }
+            }
 
     @staticmethod
     def get_configspace():
@@ -195,11 +208,17 @@ if __name__ == "__main__":
     worker = KerasWorker(x_train, x_test, run_id="0")
     # cs = worker.get_configspace()
     # config = cs.sample_configuration().get_dictionary()
-    config = {'optimizer': 'Adam', 'lr': 0.001,
-              'recurrent_activation_encoder': 'sigmoid', 'activation_encoder': 'tanh',
-              'recurrent_activation_decoder': 'sigmoid', 'activation_decoder': 'tanh',
-              'dropout': 0.0, 'recurrent_dropout': 0.0
-              }
+    # config = {'optimizer': 'Adam', 'lr': 0.001,
+    #           'recurrent_activation_encoder': 'sigmoid', 'activation_encoder': 'tanh',
+    #           'recurrent_activation_decoder': 'sigmoid', 'activation_decoder': 'tanh',
+    #           'dropout': 0.0, 'recurrent_dropout': 0.0
+    #           }
+    config = {
+        'optimizer': 'Adam', 'lr': 4.7154282376362374e-05,
+        'recurrent_activation_encoder': 'sigmoid', 'activation_encoder': 'sigmoid',
+        'recurrent_activation_decoder': 'sigmoid', 'activation_decoder': 'tanh',
+        'dropout': 0.0, 'recurrent_dropout': 0.0
+    }
 
     print(config)
     res = worker.compute(
@@ -208,3 +227,4 @@ if __name__ == "__main__":
         working_directory="/home/paperspace/hyperparameter-optimization/Optimization_HpBandSter/RNN",
     )
     print(res)
+    print(seed)

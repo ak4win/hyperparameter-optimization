@@ -40,12 +40,12 @@ plotter = plotter.Plotter("model", plt)
 
 # choose your model you want to optimize
 # "CBN_VAE" or "RNN"
-current_model = "RNN"
+current_model = "CBN_VAE"
 model_config = model_configs[current_model]
 
 # choose an optimization method "RS" = Random Search, "BO" == Bayesian Optimization,
 # "HB" = Hyperband, "HpBandSter" == Bayesian Optimization Hyperband (BOHB)
-current_optimization_method = "HB"
+current_optimization_method = "HpBandSter"
 
 x_train, x_test = read_and_preprocess_data(
     sequence_length=model_config['sequence_length'],
@@ -65,7 +65,7 @@ x_test = x_test[train_test_cutoff:, :, :]
 if current_optimization_method == "HpBandSter":
     run_experiments = model_config['hpbandster_run_experiments_function']
 
-    # run_experiments(x_train, x_test, overwrite=True)
+    run_experiments(x_train, x_test, overwrite=False)
 
     best_config, best_model = get_best_result(current_model)
 
@@ -99,6 +99,7 @@ history, train_preds, test_preds, model_after_training = retrain_best_model(best
 plot_sequence((np.array(history['loss']), 'Training loss'), (np.array(history['val_loss']), 'Validation loss'))
 plotter('learning_curve')
 
+
 # Save the model for later use
 file_path = f"/home/paperspace/hyperparameter-optimization/save_models/{current_model}"
 tf.keras.models.save_model(model_after_training, file_path, overwrite=True)
@@ -114,8 +115,8 @@ print(f'Algorithm "{current_optimization_method}" found this config for model "{
 print(f"The percentual-RMS-difference for the configuration after the re-training is {prms_diff}")
 
 # Visualize reconstructions for more intuitive judgement of the results
-plot_sequence((x_test.reshape(-1)[3000:4000], 'original'),
-              (reconstruction.reshape(-1)[3000:4000], 'reconstruction'),
+plot_sequence((x_test.reshape(-1), 'original'),
+              (reconstruction.reshape(-1), 'reconstruction'),
               title=prms_diff)
 plotter("reconstruction_1k")
 

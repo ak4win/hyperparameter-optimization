@@ -1,5 +1,3 @@
-
-
 from tensorflow.keras.layers import Input, LSTM, RepeatVector
 from tensorflow.keras.models import Model
 from keras.optimizers import Adam, SGD
@@ -16,12 +14,12 @@ def create_model(config, batch_size=1, sequence_length=20, n_dims=1):
         return_sequences=False,
         stateful=True,
         activation=config["activation_encoder"],
-        # recurrent_activation=config["recurrent_activation_encoder"],
+        recurrent_activation=config["recurrent_activation_encoder"],
         # kernel_regularizer=kernel_regularizer,
         # bias_regularizer=bias_regularizer,
         # activity_regularizer=activity_regularizer,
         # dropout=config["dropout"],
-        recurrent_dropout=config["recurrent_dropout"],
+        # recurrent_dropout=config["recurrent_dropout"],
     )(x)
 
     x = RepeatVector(sequence_length)(x)
@@ -32,12 +30,12 @@ def create_model(config, batch_size=1, sequence_length=20, n_dims=1):
         # bias_initializer=global_mean_bias,
         # unit_forget_bias=False,
         activation=config["activation_decoder"],
-        # recurrent_activation=config["recurrent_activation_decoder"],
+        recurrent_activation=config["recurrent_activation_decoder"],
         # kernel_regularizer=kernel_regularizer,
         # bias_regularizer=bias_regularizer,
         # activity_regularizer=activity_regularizer,
         # dropout=config["dropout"],
-        recurrent_dropout=config["recurrent_dropout"],
+        # recurrent_dropout=config["recurrent_dropout"],
     )(x)
 
     outputs = x

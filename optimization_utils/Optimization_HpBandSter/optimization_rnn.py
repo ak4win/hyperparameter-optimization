@@ -7,6 +7,7 @@ which is useful for long runs, because intermediate results are directly availab
 for analysis. It also contains a more realistic search space with different types
 of variables to be optimized.
 """
+from global_utils.get_data_multi_note import read_and_preprocess_data
 from optimization_utils.Optimization_HpBandSter.optimization_cbn_vae import JsonResultsSaver
 from optimization_utils.Optimization_HpBandSter.create_arguments import create_arguments
 from optimization_utils.Optimization_HpBandSter.worker_rnn import KerasWorker as worker
@@ -90,3 +91,15 @@ def run_experiments(x_train, x_test, overwrite=False):
     # shutdown
     bohb.shutdown(shutdown_workers=True)
     NS.shutdown()
+
+
+if __name__ == '__main__':
+    x_train, x_test = read_and_preprocess_data(
+        sequence_length=20,
+        batch_size=1,
+        motes_train=[7],
+        motes_test=[7],
+    )
+    x_train = x_train[:100, :, :]
+    x_test = x_test[200:225, :, :]
+    run_experiments(x_train, x_test, overwrite=True)
