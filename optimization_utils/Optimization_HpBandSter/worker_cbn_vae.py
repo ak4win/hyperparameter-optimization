@@ -33,22 +33,8 @@ Please refer to the compute method below to see how those are defined using the
 ConfigSpace package.
 
 """
-from numpy.random import seed
-
-seed(123)
-
-import tensorflow as tf
-
-import keras
-from keras.models import Model
-from keras.layers import (
-    Dense,
-    Lambda,
-    Flatten,
-    Reshape,
-    Input,
-    Conv2D,
-)
+from numpy.random import seed; seed(1)
+import tensorflow as tf; tf.random.set_seed(2)
 
 
 import ConfigSpace as CS
@@ -57,38 +43,27 @@ import ConfigSpace.hyperparameters as CSH
 from hpbandster.core.worker import Worker
 
 from global_utils.get_data_multi_note import read_and_preprocess_data
-from global_utils.layers.custom_conv2d_transpose import CustomConv2DTranspose
-from global_utils.layers.max_pooling_with_argmax import MaxPoolWithArgMax
-from global_utils.layers.unpooling_with_argmax import UnMaxPoolWithArgmax
-from global_utils.layers.sampling import sample_from_latent_space
+from global_utils.plot_sequence import plot_sequence
+from lib.create_cbn_vae import create_model
 
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+from global_utils.plotter import Plotter
+import matplotlib.pyplot as plt
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
+plotter = Plotter('debug_cbn', plt)
 
 
 class KerasWorker(Worker):
-    def __init__(self, **kwargs):
+    def __init__(self, x_train, x_test, **kwargs):
 
         super().__init__(**kwargs)
 
         self.sequence_length = 120
         self.batch_size = 1
 
-        x_train, x_test = read_and_preprocess_data(
-            should_smooth=False,
-            smoothing_window=100,
-            sequence_length=self.sequence_length,
-            cut_off_min=5,
-            cut_off_max=45,
-            should_scale=True,
-            batch_size=self.batch_size,
-            motes_train=[7],
-            motes_test=[7],
-        )
-
-        self.x_train = x_train[:310, :, :]
-        self.x_test = x_test[310:, :, :]
+        self.x_train = x_train
+        self.x_test = x_test
 
     def compute(self, config, budget, working_directory, *args, **kwargs):
         """
@@ -97,134 +72,7 @@ class KerasWorker(Worker):
         The input parameter "config" (dictionary) contains the sampled configurations passed by the bohb optimizer
         """
 
-        # Encoder
-        inputs = Input(shape=(self.sequence_length, 1, 1), batch_size=self.batch_size)
-
-        channels, kernel = 24, 12
-        out_conv1 = Conv2D(
-            channels,
-            (kernel, 1),
-            strides=kernel,
-            activation=config["encoder_activation"],
-            padding="same",
-        )(inputs)
-        out_reshape1 = Reshape((-1, 1, 1))(out_conv1)
-        out_pool1, mask1 = MaxPoolWithArgMax()(out_reshape1)
-
-        channels, kernel = 12, 9
-        out_conv2 = Conv2D(
-            channels,
-            (kernel, 1),
-            strides=kernel,
-            activation=config["encoder_activation"],
-            padding="same",
-        )(out_pool1)
-        out_reshape2 = Reshape((-1, 1, 1))(out_conv2)
-        out_pool2, mask2 = MaxPoolWithArgMax()(out_reshape2)
-
-        out_max_pool_1, mask3 = MaxPoolWithArgMax()(out_pool2)
-
-        channels, kernel = 12, 5
-        out_conv3 = Conv2D(
-            channels,
-            (kernel, 1),
-            strides=kernel,
-            activation=config["encoder_activation"],
-            padding="same",
-        )(out_max_pool_1)
-        out_reshape3 = Reshape((-1, 1, 1))(out_conv3)
-        out_pool3, mask4 = MaxPoolWithArgMax()(out_reshape3)
-
-        channels, kernel = 12, 3
-        out_conv4 = Conv2D(
-            channels,
-            (kernel, 1),
-            strides=kernel,
-            activation=config["encoder_activation"],
-            padding="same",
-        )(out_pool3)
-        out_reshape4 = Reshape((-1, 1, 1))(out_conv4)
-        out_pool4, mask5 = MaxPoolWithArgMax()(out_reshape4)
-
-        out_max_pool_2, mask6 = MaxPoolWithArgMax()(out_pool4)
-
-        out_flatten = Flatten()(out_max_pool_2)
-        out_dense1 = Dense(
-            config["dense_nodes"], activation=config["bottleneck_activation"]
-        )(out_flatten)
-        z_mean = Dense(5, activation=config["bottleneck_activation"], name="z_mean")(
-            out_dense1
-        )
-        z_log_var = Dense(
-            5, activation=config["bottleneck_activation"], name="z_log_var"
-        )(out_dense1)
-        z = Lambda(sample_from_latent_space, output_shape=(5,), name="z")(
-            [z_mean, z_log_var]
-        )
-
-        # Decoder
-        de_out_dense2 = Dense(
-            config["dense_nodes"], activation=config["bottleneck_activation"]
-        )(z)
-        de_out_dense3 = Dense(54, activation=config["bottleneck_activation"])(
-            de_out_dense2
-        )
-        de_inverse_flatten = Reshape((-1, 1, 1))(de_out_dense3)
-
-        de_out_pool5 = UnMaxPoolWithArgmax(stride=2)(de_inverse_flatten, mask6)
-
-        channels, kernel = 12, 3
-        de_out_pool6 = UnMaxPoolWithArgmax(stride=2)(de_out_pool5, mask5)
-        de_out_reshape5 = Reshape(out_conv4.shape[1:])(de_out_pool6)
-        de_out_transcov1 = CustomConv2DTranspose(
-            channels, kernel, out_pool3.shape, activation=config["decoder_activation"]
-        )(de_out_reshape5)
-
-        channels, kernel = 12, 5
-        de_out_pool7 = UnMaxPoolWithArgmax(stride=2)(de_out_transcov1, mask4)
-        de_out_reshape6 = Reshape(out_conv3.shape[1:])(de_out_pool7)
-        de_out_transcov2 = CustomConv2DTranspose(
-            channels,
-            kernel,
-            out_max_pool_1.shape,
-            activation=config["decoder_activation"],
-        )(de_out_reshape6)
-
-        de_out_pool8 = UnMaxPoolWithArgmax(stride=2)(de_out_transcov2, mask3)
-
-        channels, kernel = 12, 9
-        de_out_pool9 = UnMaxPoolWithArgmax(stride=2)(de_out_pool8, mask2)
-        de_out_reshape7 = Reshape(out_conv2.shape[1:])(de_out_pool9)
-        de_out_transcov3 = CustomConv2DTranspose(
-            channels, kernel, out_pool1.shape, activation=config["decoder_activation"]
-        )(de_out_reshape7)
-
-        channels, kernel = 24, 12
-        de_out_pool10 = UnMaxPoolWithArgmax(stride=2)(de_out_transcov3, mask1)
-        de_out_reshape8 = Reshape(out_conv1.shape[1:])(de_out_pool10)
-        de_out_transcov4 = CustomConv2DTranspose(
-            channels, kernel, inputs.shape, activation=config["decoder_activation"]
-        )(de_out_reshape8)
-        outputs = de_out_transcov4
-
-        model = Model(inputs, outputs)
-
-        if config["optimizer"] == "Adam":
-            optimizer = keras.optimizers.Adam(lr=config["lr"])
-        else:
-            optimizer = keras.optimizers.SGD(
-                lr=config["lr"], momentum=config["sgd_momentum"]
-            )
-
-        model.compile(
-            loss=keras.losses.MeanSquaredError(),
-            optimizer=optimizer,
-            metrics=[tf.keras.metrics.MeanSquaredError()],
-        )
-
-        stop_early = tf.keras.callbacks.EarlyStopping(
-            monitor="val_loss", patience=3, restore_best_weights=True
-        )
+        model = create_model(config, batch_size=self.batch_size, sequence_length=self.sequence_length)
 
         tensorboard_log = tf.keras.callbacks.TensorBoard(
             "save_results/CBN_VAE/HpBandSter/tensorboard_logs"
@@ -237,11 +85,13 @@ class KerasWorker(Worker):
             epochs=int(budget),
             verbose=1,
             validation_data=(self.x_test, self.x_test),
-            callbacks=[stop_early, tensorboard_log],
+            callbacks=[tensorboard_log],  # Don't early stop for now as the learning curve is rather noisy
         )
+        plot_sequence((model.predict(self.x_train, batch_size=self.batch_size), 'reconstr'), (self.x_train, 'original'))
+        plotter('train')
+        plot_sequence((model.predict(self.x_test, batch_size=self.batch_size), 'reconstr'), (self.x_test, 'original'))
+        plotter('test')
 
-        # train_score = model.predict(self.x_train, self.x_train, batch_size=self.batch_size)
-        # val_score = model.predict(self.x_test, self.x_test, batch_size=self.batch_size)
         train_score = model.evaluate(
             self.x_train, self.x_train, batch_size=self.batch_size, verbose=0
         )
@@ -252,10 +102,10 @@ class KerasWorker(Worker):
 
         # import IPython; IPython.embed()
         return {
-            "loss": val_score[1],  # remember: HpBandSter always minimizes!
+            "loss": val_score,  # remember: HpBandSter always minimizes!
             "info": {
-                "train accuracy": train_score[1],
-                "validation accuracy": val_score[1],
+                "train loss": train_score,
+                "validation loss": val_score,
                 "number of parameters": model.count_params(),
             },
         }
@@ -312,14 +162,31 @@ class KerasWorker(Worker):
 
 
 if __name__ == "__main__":
-    worker = KerasWorker(run_i1="0")
+    x_train, x_test = read_and_preprocess_data(
+        sequence_length=120,
+        batch_size=32,
+        motes_train=[7],
+        motes_test=[7],
+    )
+    x_train = x_train[32:64, :, :]
+    x_test = x_test[64:96, :, :]
+
+    worker = KerasWorker(x_train, x_test, run_id="0")
     cs = worker.get_configspace()
 
-    config = cs.sample_configuration().get_dictionary()
-    print(config)
+    # config = cs.sample_configuration().get_dictionary()
+    # print(config)
+    # config = {"bottleneck_activation": "relu", "decoder_activation": "tanh", "dense_nodes": 26,
+    #           "encoder_activation": "tanh", "lr": 0.007220465601391944, "optimizer": "Adam",
+    #           "sgd_momentum": 0.6499231840785764}
+
+    # Changing decoder activation from sigmoid to tanh will improve results drastically
+    config = {'bottleneck_activation': 'relu', 'decoder_activation': 'sigmoid', 'dense_nodes': 12,
+              'encoder_activation': 'tanh',
+              'lr': 0.0046277046865170245, 'optimizer': 'Adam', 'sgd_momentum': 0.9212735787477947}
     res = worker.compute(
         config=config,
-        budget=5,
+        budget=25,
         working_directory="/home/paperspace/hyperparameter-optimization/Optimization_HpBandSter/CBN_VAE",
     )
     print(res)

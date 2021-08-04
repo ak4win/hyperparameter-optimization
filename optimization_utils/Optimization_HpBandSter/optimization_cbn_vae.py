@@ -7,82 +7,29 @@ which is useful for long runs, because intermediate results are directly availab
 for analysis. It also contains a more realistic search space with different types
 of variables to be optimized.
 """
+from optimization_utils.Optimization_HpBandSter.json_results_saver import JsonResultsSaver
+from optimization_utils.Optimization_HpBandSter.create_arguments import create_arguments
+from numpy.random import seed; seed(1)
+import tensorflow as tf; tf.random.set_seed(2)
+
+from optimization_utils.Optimization_HpBandSter.worker_cbn_vae import KerasWorker as worker
+
 import os
 import pickle
-import argparse
 
 import hpbandster.core.nameserver as hpns
-import hpbandster.core.result as hpres
 
 from hpbandster.optimizers import BOHB
 
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
-
-from optimization_utils.Optimization_HpBandSter.worker_cbn_vae import (
-    KerasWorker as worker,
-)
+logging.basicConfig(level=logging.WARNING)
 
 
-def create_arguments():
-    parser = argparse.ArgumentParser(
-        description="CBN-VAE model of our research project is optimized by the HpBandSter Methdod."
-    )
-    parser.add_argument(
-        "--min_budget",
-        type=float,
-        help="Minimum number of epochs for training.",
-        default=5,
-    )
-    parser.add_argument(
-        "--max_budget",
-        type=float,
-        help="Maximum number of epochs for training.",
-        default=30,
-    )
-    parser.add_argument(
-        "--n_iterations",
-        type=int,
-        help="Number of iterations performed by the optimizer",
-        default=16,
-    )
-    parser.add_argument(
-        "--worker", help="Flag to turn this into a worker process", action="store_true"
-    )
-    parser.add_argument(
-        "--run_id",
-        type=str,
-        help="A unique run id for this optimization run. An easy option is to use the job id of the clusters scheduler",
-    )
-    parser.add_argument(
-        "--nic_name",
-        type=str,
-        help="Which network interface to use for communication.",
-        default="lo",
-    )
-    parser.add_argument(
-        "--shared_directory",
-        type=str,
-        help="A directory that is accessible for all processes, e.g. a NFS share.",
-        default="save_results/CBN_VAE/HpBandSter",
-    )
-    parser.add_argument(
-        "--backend",
-        help="Toggles which worker is used. Choose between a pytorch and a keras implementation.",
-        choices=["pytorch", "keras"],
-        default="keras",
-    )
-
-    args = parser.parse_args()
-
-    return args
+args = create_arguments(25, 75, 'CBN_VAE')
 
 
-args = create_arguments()
-
-
-def run_experiments():
+def run_experiments(x_train, x_test, overwrite=False):
     # Every process has to lookup the hostname
     host = hpns.nic_name_to_host(args.nic_name)
 
@@ -92,7 +39,7 @@ def run_experiments():
         time.sleep(
             5
         )  # short artificial delay to make sure the nameserver is already running
-        w = worker(run_id=args.run_id, host=host, timeout=120)
+        w = worker(x_train, x_test, run_id=args.run_id, host=host, timeout=120)
         w.load_nameserver_credentials(working_directory=args.shared_directory)
         w.run(background=False)
         exit(0)
@@ -102,8 +49,8 @@ def run_experiments():
     # interesting. The core.result submodule contains the functionality to
     # read the two generated files (results.json and configs.json) and
     # create a Result object.
-    result_logger = hpres.json_result_logger(
-        directory=args.shared_directory, overwrite=True
+    result_logger = JsonResultsSaver(
+        directory=args.shared_directory, overwrite=overwrite
     )
 
     # Start a nameserver:
@@ -114,6 +61,7 @@ def run_experiments():
 
     # Start local worker
     w = worker(
+        x_train, x_test,
         run_id=args.run_id,
         host=host,
         nameserver=ns_host,

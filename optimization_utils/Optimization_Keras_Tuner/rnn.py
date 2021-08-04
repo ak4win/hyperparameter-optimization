@@ -1,68 +1,17 @@
-from numpy.random import seed
-
-seed(1)
-
-# Tensorflow imports
-import tensorflow as tf
-from tensorflow.keras.layers import LSTM, Input, RepeatVector
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Adam
+from lib.create_rnn import create_model
+from numpy.random import seed; seed(1)
+import tensorflow as tf; tf.random.set_seed(2)
 
 
 def create_model_rnn(hp):
-
-    sequence_length = 20
-    n_dims = 1
-    batch_size = 1
-    activation = hp.Choice("activation", ["tanh", "relu", "sigmoid"])
-    recurrent_activation = hp.Choice("reccurent_activation", ["sigmoid", "tanh"])
-
-    # kernel_regularizer=l2(0.0),
-    # bias_regularizer=l2(0.0),
-    # activity_regularizer=l2(0.0),
-    dropout = 0.0
-    recurrent_dropout = 0.0
-
-    # [batch, timesteps, feature] is shape of inputs
-    inputs = Input(shape=(sequence_length, n_dims), batch_size=batch_size)
-    x = inputs
-    x = LSTM(
-        n_dims,
-        return_sequences=False,
-        stateful=True,
-        activation=activation,
-        recurrent_activation=recurrent_activation,
-        # kernel_regularizer=kernel_regularizer,
-        # bias_regularizer=bias_regularizer,
-        # activity_regularizer=activity_regularizer,
-        dropout=dropout,
-        recurrent_dropout=recurrent_dropout,
-    )(x)
-
-    x = RepeatVector(sequence_length)(x)
-    x = LSTM(
-        n_dims,
-        stateful=True,
-        return_sequences=True,
-        # bias_initializer=global_mean_bias,
-        unit_forget_bias=False,
-        activation=activation,
-        recurrent_activation=recurrent_activation,
-        # kernel_regularizer=kernel_regularizer,
-        # bias_regularizer=bias_regularizer,
-        # activity_regularizer=activity_regularizer,
-        dropout=dropout,
-        recurrent_dropout=recurrent_dropout,
-    )(x)
-
-    outputs = x
-
-    model = Model(inputs, outputs)
-
-    model.compile(
-        optimizer=Adam(hp.Choice("learning_rate", values=[1e-2, 1e-3, 1e-4])),
-        loss=hp.Choice("loss_function", hp.Choice("loss_function", ["mse"])),
-        metrics=[tf.keras.metrics.MeanSquaredError()],
-    )
-
-    return model
+    activation_encoder = hp.Choice("activation_encoder", ["tanh", "relu", "sigmoid"])
+    activation_decoder = hp.Choice("activation_decoder", ["tanh", "relu", "sigmoid"])
+    recurrent_activation_encoder = hp.Choice("recurrent_activation_encoder", ["sigmoid", "tanh"])
+    recurrent_activation_decoder = hp.Choice("recurrent_activation_decoder", ["sigmoid", "tanh"])
+    learning_rate = hp.Choice("learning_rate", values=[1e-2, 1e-3, 1e-4])
+    config = {'optimizer': 'Adam', 'lr': learning_rate,
+              'recurrent_activation_encoder': recurrent_activation_encoder, 'activation_encoder': activation_encoder,
+              'recurrent_activation_decoder': recurrent_activation_decoder, 'activation_decoder': activation_decoder,
+              'dropout': 0.0, 'recurrent_dropout': 0.0
+              }
+    return create_model(config)

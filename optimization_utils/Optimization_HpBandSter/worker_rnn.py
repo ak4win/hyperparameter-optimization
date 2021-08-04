@@ -39,13 +39,10 @@ Please refer to the compute method below to see how those are defined using the
 ConfigSpace package.
 """
 
+from lib.create_rnn import create_model
+from global_utils.plot_sequence import plot_sequence
+from global_utils.plotter import Plotter
 import tensorflow as tf
-
-import keras
-from keras.models import Model
-from keras.layers import Input, RepeatVector
-from keras.layers import LSTM
-
 
 import ConfigSpace as CS
 import ConfigSpace.hyperparameters as CSH
@@ -54,14 +51,14 @@ from hpbandster.core.worker import Worker
 
 from global_utils.get_data_multi_note import read_and_preprocess_data
 
-
+import matplotlib.pyplot as plt
 import logging
-
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.WARNING)
+plotter = Plotter('debug_rnn', plt)
 
 
 class KerasWorker(Worker):
-    def __init__(self, **kwargs):
+    def __init__(self, x_train, x_test, **kwargs):
 
         super().__init__(**kwargs)
 
@@ -69,77 +66,11 @@ class KerasWorker(Worker):
         self.sequence_length = 20
         self.n_dims = 1
 
-        x_train, x_test = read_and_preprocess_data(
-            should_smooth=False,
-            smoothing_window=100,
-            sequence_length=self.sequence_length,
-            cut_off_min=5,
-            cut_off_max=45,
-            should_scale=True,
-            batch_size=self.batch_size,
-            motes_train=[7],
-            motes_test=[7],
-        )
-
-        self.x_train = x_train[:1900, :, :]
-        self.x_test = x_test[1900:, :, :]
+        self.x_train = x_train
+        self.x_test = x_test
 
     def compute(self, config, budget, working_directory, *args, **kwargs):
-        """
-        Simple example for a compute function using a feed forward network.
-        It is trained on the MNIST dataset.
-        The input parameter "config" (dictionary) contains the sampled configurations passed by the bohb optimizer
-        """
-
-        inputs = Input(
-            shape=(self.sequence_length, self.n_dims), batch_size=self.batch_size
-        )
-        x = inputs
-        x = LSTM(
-            units=self.n_dims,
-            return_sequences=False,
-            stateful=True,
-            activation=config["encoder_activation"],
-            recurrent_activation=config["recurrent_activation_encoder"],
-            # kernel_regularizer=kernel_regularizer,
-            # bias_regularizer=bias_regularizer,
-            # activity_regularizer=activity_regularizer,
-            dropout=config["dropout"],
-            recurrent_dropout=config["recurrent_dropout"],
-        )(x)
-
-        x = RepeatVector(self.sequence_length)(x)
-        x = LSTM(
-            units=self.n_dims,
-            stateful=True,
-            return_sequences=True,
-            # bias_initializer=global_mean_bias,
-            unit_forget_bias=False,
-            activation=config["activation_decoder"],
-            recurrent_activation=config["recurrent_activation_decoder"],
-            # kernel_regularizer=kernel_regularizer,
-            # bias_regularizer=bias_regularizer,
-            # activity_regularizer=activity_regularizer,
-            dropout=config["dropout"],
-            recurrent_dropout=config["recurrent_dropout"],
-        )(x)
-
-        outputs = x
-
-        model = Model(inputs, outputs)
-
-        if config["optimizer"] == "Adam":
-            optimizer = keras.optimizers.Adam(lr=config["lr"])
-        else:
-            optimizer = keras.optimizers.SGD(
-                lr=config["lr"], momentum=config["sgd_momentum"]
-            )
-
-        model.compile(
-            loss=keras.losses.MeanSquaredError(),
-            optimizer=optimizer,
-            metrics=[tf.keras.metrics.MeanSquaredError()],
-        )
+        model = create_model(config)
 
         stop_early = tf.keras.callbacks.EarlyStopping(
             monitor="val_loss", patience=3, restore_best_weights=True
@@ -159,8 +90,13 @@ class KerasWorker(Worker):
             callbacks=[stop_early, tensorboard_log],
         )
 
-        # train_score = model.predict(self.x_train, self.x_train, batch_size=self.batch_size)
-        # val_score = model.predict(self.x_test, self.x_test, batch_size=self.batch_size)
+        plot_sequence((model.predict(self.x_train, batch_size=self.batch_size),
+                      'reconstruction'), (self.x_train, 'originial'))
+        plotter('train')
+        plot_sequence((model.predict(self.x_test, batch_size=self.batch_size),
+                      'reconstruction'), (self.x_test, 'originial'))
+        plotter('test')
+
         train_score = model.evaluate(
             self.x_train, self.x_train, batch_size=self.batch_size, verbose=0
         )
@@ -171,10 +107,10 @@ class KerasWorker(Worker):
 
         # import IPython; IPython.embed()
         return {
-            "loss": val_score[1],  # remember: HpBandSter always minimizes!
+            "loss": val_score,  # remember: HpBandSter always minimizes!
             "info": {
-                "train accuracy": train_score[1],
-                "validation accuracy": val_score[1],
+                "train loss": train_score,
+                "validation loss": val_score,
                 "number of parameters": model.count_params(),
             },
         }
@@ -194,7 +130,7 @@ class KerasWorker(Worker):
         )
 
         encoder_activation = CSH.CategoricalHyperparameter(
-            "encoder_activation", ["relu", "sigmoid", "tanh"]
+            "activation_encoder", ["relu", "sigmoid", "tanh"]
         )
         activation_decoder = CSH.CategoricalHyperparameter(
             "activation_decoder", ["relu", "sigmoid", "tanh"]
@@ -226,15 +162,15 @@ class KerasWorker(Worker):
             ]
         )
 
-        dropout = CSH.UniformFloatHyperparameter(
-            "dropout", lower=0.0, upper=0.3, default_value=0.0
-        )
+        # dropout = CSH.UniformFloatHyperparameter(
+        #     "dropout", lower=0.0, upper=0.3, default_value=0.0
+        # )
 
-        recurrent_dropout = CSH.UniformFloatHyperparameter(
-            "recurrent_dropout", lower=0.0, upper=0.3, default_value=0.0
-        )
+        # recurrent_dropout = CSH.UniformFloatHyperparameter(
+        #     "recurrent_dropout", lower=0.0, upper=0.3, default_value=0.0
+        # )
 
-        cs.add_hyperparameters([dropout, recurrent_dropout])
+        # cs.add_hyperparameters([dropout, recurrent_dropout])
 
         # The hyperparameter sgd_momentum will be used, if the configuration
         # contains 'SGD' as optimizer.
@@ -245,14 +181,30 @@ class KerasWorker(Worker):
 
 
 if __name__ == "__main__":
-    worker = KerasWorker(run_id="0")
-    cs = worker.get_configspace()
+    x_train, x_test = read_and_preprocess_data(
+        sequence_length=20,
+        batch_size=1,
+        motes_train=[7],
+        motes_test=[7],
+    )
+    # x_train = x_train[:100, :, :]
+    # x_test = x_test[200:225, :, :]
+    x_train = x_train[:1900, :, :]
+    x_test = x_test[1900:, :, :]
 
-    config = cs.sample_configuration().get_dictionary()
+    worker = KerasWorker(x_train, x_test, run_id="0")
+    # cs = worker.get_configspace()
+    # config = cs.sample_configuration().get_dictionary()
+    config = {'optimizer': 'Adam', 'lr': 0.001,
+              'recurrent_activation_encoder': 'sigmoid', 'activation_encoder': 'tanh',
+              'recurrent_activation_decoder': 'sigmoid', 'activation_decoder': 'tanh',
+              'dropout': 0.0, 'recurrent_dropout': 0.0
+              }
+
     print(config)
     res = worker.compute(
         config=config,
-        budget=5,
+        budget=1,
         working_directory="/home/paperspace/hyperparameter-optimization/Optimization_HpBandSter/RNN",
     )
     print(res)
