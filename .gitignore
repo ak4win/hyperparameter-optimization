@@ -7,3 +7,6 @@ save_results
 save_models
 optimization_utils/Optimization_HpBandSter/__pycache__
 archive
+
+/.venv
+/.mypy_cache
