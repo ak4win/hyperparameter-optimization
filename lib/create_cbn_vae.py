@@ -1,4 +1,6 @@
-from numpy.random import seed; seed(123)
+from numpy.random import seed
+
+seed(123)
 
 import keras
 from keras.models import Model
@@ -75,9 +77,9 @@ def create_model(config, batch_size=32, sequence_length=120):
     z_mean = Dense(5, activation=config["bottleneck_activation"], name="z_mean")(
         out_dense1
     )
-    z_log_var = Dense(
-        5, activation=config["bottleneck_activation"], name="z_log_var"
-    )(out_dense1)
+    z_log_var = Dense(5, activation=config["bottleneck_activation"], name="z_log_var")(
+        out_dense1
+    )
     z = Lambda(sample_from_latent_space, output_shape=(5,), name="z")(
         [z_mean, z_log_var]
     )
@@ -86,9 +88,7 @@ def create_model(config, batch_size=32, sequence_length=120):
     de_out_dense2 = Dense(
         config["dense_nodes"], activation=config["bottleneck_activation"]
     )(z)
-    de_out_dense3 = Dense(54, activation=config["bottleneck_activation"])(
-        de_out_dense2
-    )
+    de_out_dense3 = Dense(54, activation=config["bottleneck_activation"])(de_out_dense2)
     de_inverse_flatten = Reshape((-1, 1, 1))(de_out_dense3)
 
     de_out_pool5 = UnMaxPoolWithArgmax(stride=2)(de_inverse_flatten, mask6)
