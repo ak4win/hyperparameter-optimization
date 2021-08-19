@@ -5,9 +5,7 @@ from keras.losses import MeanSquaredError
 
 
 def create_model(config, batch_size=1, sequence_length=20, n_dims=1):
-    inputs = Input(
-        shape=(sequence_length, n_dims), batch_size=batch_size
-    )
+    inputs = Input(shape=(sequence_length, n_dims), batch_size=batch_size)
     x = inputs
     x = LSTM(
         units=n_dims,
@@ -18,8 +16,8 @@ def create_model(config, batch_size=1, sequence_length=20, n_dims=1):
         # kernel_regularizer=kernel_regularizer,
         # bias_regularizer=bias_regularizer,
         # activity_regularizer=activity_regularizer,
-        # dropout=config["dropout"],
-        # recurrent_dropout=config["recurrent_dropout"],
+        dropout=config["dropout"],
+        recurrent_dropout=config["recurrent_dropout"],
     )(x)
 
     x = RepeatVector(sequence_length)(x)
@@ -34,8 +32,8 @@ def create_model(config, batch_size=1, sequence_length=20, n_dims=1):
         # kernel_regularizer=kernel_regularizer,
         # bias_regularizer=bias_regularizer,
         # activity_regularizer=activity_regularizer,
-        # dropout=config["dropout"],
-        # recurrent_dropout=config["recurrent_dropout"],
+        dropout=config["dropout"],
+        recurrent_dropout=config["recurrent_dropout"],
     )(x)
 
     outputs = x
@@ -45,9 +43,7 @@ def create_model(config, batch_size=1, sequence_length=20, n_dims=1):
     if config["optimizer"] == "Adam":
         optimizer = Adam(lr=config["lr"])
     else:
-        optimizer = SGD(
-            lr=config["lr"], momentum=config["sgd_momentum"]
-        )
+        optimizer = SGD(lr=config["lr"], momentum=config["sgd_momentum"])
 
     model.compile(
         loss=MeanSquaredError(),
