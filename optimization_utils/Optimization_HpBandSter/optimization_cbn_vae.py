@@ -26,7 +26,7 @@ import logging
 logging.basicConfig(level=logging.WARNING)
 
 
-args = create_arguments(25, 75, 'CBN_VAE')
+args = create_arguments(10, 35, 'CBN_VAE')
 
 
 def run_experiments(x_train, x_test, overwrite=False):

@@ -21,7 +21,7 @@ def create_arguments(min_budget, max_budget, model_name):
         "--n_iterations",
         type=int,
         help="Number of iterations performed by the optimizer",
-        default=16,
+        default=3,
     )
     parser.add_argument(
         "--worker", help="Flag to turn this into a worker process", action="store_true"

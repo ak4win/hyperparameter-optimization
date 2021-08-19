@@ -8,11 +8,17 @@ for analysis. It also contains a more realistic search space with different type
 of variables to be optimized.
 """
 from global_utils.get_data_multi_note import read_and_preprocess_data
-from optimization_utils.Optimization_HpBandSter.optimization_cbn_vae import JsonResultsSaver
+from optimization_utils.Optimization_HpBandSter.optimization_cbn_vae import (
+    JsonResultsSaver,
+)
 from optimization_utils.Optimization_HpBandSter.create_arguments import create_arguments
 from optimization_utils.Optimization_HpBandSter.worker_rnn import KerasWorker as worker
-from numpy.random import seed; seed(1)
-import tensorflow as tf; tf.random.set_seed(2)
+from numpy.random import seed
+
+seed(1)
+import tensorflow as tf
+
+tf.random.set_seed(2)
 
 import os
 import pickle
@@ -26,7 +32,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 
-args = create_arguments(3, 10, 'RNN')
+args = create_arguments(2, 8, "RNN")
 
 
 def run_experiments(x_train, x_test, overwrite=False):
@@ -61,7 +67,8 @@ def run_experiments(x_train, x_test, overwrite=False):
 
     # Start local worker
     w = worker(
-        x_train, x_test,
+        x_train,
+        x_test,
         run_id=args.run_id,
         host=host,
         nameserver=ns_host,
@@ -93,7 +100,7 @@ def run_experiments(x_train, x_test, overwrite=False):
     NS.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     x_train, x_test = read_and_preprocess_data(
         sequence_length=20,
         batch_size=1,
