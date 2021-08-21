@@ -1,10 +1,33 @@
 {
-  "files.watcherExclude": {
-    "**/.git/objects/**": true,
-    "**/.git/subtree-cache/**": true,
-    "**/node_modules/*/**": true,
-    "**/.hg/store/**": true,
-    "**/.venv/**": true,
-    "**/.mypy_cache/**": true
-  }
+  "[python]": { "editor.defaultFormatter": "ms-python.python" },
+  // flake8
+  "python.linting.flake8Enabled": true,
+  "python.linting.enabled": true,
+  "python.linting.lintOnSave": true,
+  "python.linting.flake8Args": [
+    "--ignore=E402", // Module level imports are not on top of file
+    "--ignore=E501", //
+    "--ignore=E702", // Multiple statements in one line
+    "--max-line-length=120"
+  ],
+  // mypy
+  "python.linting.mypyEnabled": true,
+  "python.linting.mypyArgs": [
+    "--disallow-untyped-defs", // Enforce typing of functions
+    "--follow-imports=silent",
+    "--ignore-missing-imports",
+    "--show-column-numbers"
+    // "--disallow-untyped-calls" reports an error whenever a function with type annotations calls a function defined without annotations.
+  ],
+  // autopep8
+  "python.formatting.provider": "autopep8",
+  "python.formatting.autopep8Args": [
+    "--ignore",
+    "E402", // Allow for module level imports not at top of file
+    "--ignore",
+    "E702", // Allow for multiple statements per line
+    "--max-line-length",
+    "120",
+    "--experimental"
+  ]
 }
