@@ -33,8 +33,12 @@ Please refer to the compute method below to see how those are defined using the
 ConfigSpace package.
 
 """
-from numpy.random import seed; seed(1)
-import tensorflow as tf; tf.random.set_seed(2)
+from numpy.random import seed
+
+seed(1)
+import tensorflow as tf
+
+tf.random.set_seed(2)
 
 
 import ConfigSpace as CS
@@ -50,8 +54,9 @@ import logging
 
 from global_utils.plotter import Plotter
 import matplotlib.pyplot as plt
+
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
-plotter = Plotter('debug_cbn', plt)
+plotter = Plotter("debug_cbn", plt)
 
 
 class KerasWorker(Worker):
@@ -72,7 +77,9 @@ class KerasWorker(Worker):
         The input parameter "config" (dictionary) contains the sampled configurations passed by the bohb optimizer
         """
 
-        model = create_model(config, batch_size=self.batch_size, sequence_length=self.sequence_length)
+        model = create_model(
+            config, batch_size=self.batch_size, sequence_length=self.sequence_length
+        )
 
         tensorboard_log = tf.keras.callbacks.TensorBoard(
             "save_results/CBN_VAE/HpBandSter/tensorboard_logs"
@@ -85,12 +92,20 @@ class KerasWorker(Worker):
             epochs=int(budget),
             verbose=1,
             validation_data=(self.x_test, self.x_test),
-            callbacks=[tensorboard_log],  # Don't early stop for now as the learning curve is rather noisy
+            callbacks=[
+                tensorboard_log
+            ],  # Don't early stop for now as the learning curve is rather noisy
         )
-        plot_sequence((model.predict(self.x_train, batch_size=self.batch_size), 'reconstr'), (self.x_train, 'original'))
-        plotter('train')
-        plot_sequence((model.predict(self.x_test, batch_size=self.batch_size), 'reconstr'), (self.x_test, 'original'))
-        plotter('test')
+        plot_sequence(
+            (model.predict(self.x_train, batch_size=self.batch_size), "reconstr"),
+            (self.x_train, "original"),
+        )
+        plotter("train")
+        plot_sequence(
+            (model.predict(self.x_test, batch_size=self.batch_size), "reconstr"),
+            (self.x_test, "original"),
+        )
+        plotter("test")
 
         train_score = model.evaluate(
             self.x_train, self.x_train, batch_size=self.batch_size, verbose=0
@@ -181,9 +196,17 @@ if __name__ == "__main__":
     #           "sgd_momentum": 0.6499231840785764}
 
     # Changing decoder activation from sigmoid to tanh will improve results drastically
-    config = {'bottleneck_activation': 'relu', 'decoder_activation': 'sigmoid', 'dense_nodes': 12,
-              'encoder_activation': 'tanh',
-              'lr': 0.0046277046865170245, 'optimizer': 'Adam', 'sgd_momentum': 0.9212735787477947}
+
+    config = {
+        "bottleneck_activation": "relu",
+        "decoder_activation": "sigmoid",
+        "dense_nodes": 12,
+        "encoder_activation": "tanh",
+        "lr": 0.0046277046865170245,
+        "optimizer": "Adam",
+        "sgd_momentum": 0.9212735787477947,
+    }
+
     res = worker.compute(
         config=config,
         budget=25,

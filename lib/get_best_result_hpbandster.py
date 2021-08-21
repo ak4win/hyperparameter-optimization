@@ -11,7 +11,7 @@ def get_loss_of_result(result):
 
 
 def get_best_result(current_model):
-    path = os.path.join(os.getcwd(), f'save_results/{current_model}/HpBandSter/results.jsonl')
+    path = os.path.join(os.getcwd(), f'save_results/{current_model}/HpBandSter/results.json')
     with open(path, 'r') as file:
         results_raw = file.read().splitlines()
     results = list(map(lambda x: json.loads(x), results_raw))

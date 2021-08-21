@@ -11,7 +11,7 @@ class JsonResultsSaver:
         """
         # Ensure the given directory exists
         os.makedirs(directory, exist_ok=True)
-        self.results_path = os.path.join(directory, 'results.jsonl')
+        self.results_path = os.path.join(directory, 'results.json')
 
         # Ensure the config file exists/is reset
         try:
