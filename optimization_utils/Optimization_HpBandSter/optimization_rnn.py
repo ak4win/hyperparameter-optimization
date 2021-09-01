@@ -7,6 +7,12 @@ which is useful for long runs, because intermediate results are directly availab
 for analysis. It also contains a more realistic search space with different types
 of variables to be optimized.
 """
+import logging
+from hpbandster.optimizers import BOHB
+import hpbandster.core.nameserver as hpns
+import pickle
+import os
+import tensorflow as tf
 from global_utils.get_data_multi_note import read_and_preprocess_data
 from optimization_utils.Optimization_HpBandSter.optimization_cbn_vae import (
     JsonResultsSaver,
@@ -16,23 +22,14 @@ from optimization_utils.Optimization_HpBandSter.worker_rnn import KerasWorker as
 from numpy.random import seed
 
 seed(1)
-import tensorflow as tf
 
 tf.random.set_seed(2)
 
-import os
-import pickle
-
-import hpbandster.core.nameserver as hpns
-
-from hpbandster.optimizers import BOHB
-
-import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
 
-args = create_arguments(2, 8, "RNN")
+args = create_arguments(1, 8, "RNN")
 
 
 def run_experiments(x_train, x_test, overwrite=False):

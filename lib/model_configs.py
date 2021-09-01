@@ -2,6 +2,7 @@ from optimization_utils.Optimization_Keras_Tuner.rnn import create_model_rnn
 from optimization_utils.Optimization_Keras_Tuner.c_vae_model import create_model_c_vae
 from optimization_utils.Optimization_HpBandSter.optimization_cbn_vae import run_experiments as run_experiments_cbn
 from optimization_utils.Optimization_HpBandSter.optimization_rnn import run_experiments as run_experiments_rnn
+
 model_configs = {
     "RNN": {
         "batch_size": 1,

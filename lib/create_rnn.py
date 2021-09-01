@@ -1,10 +1,10 @@
 from tensorflow.keras.layers import Input, LSTM, RepeatVector
 from tensorflow.keras.models import Model
-from keras.optimizers import Adam, SGD
-from keras.losses import MeanSquaredError
+from tensorflow.keras.optimizers import Adam, SGD
+from lib.mse_without_nans import mean_squared_error_without_nans
 
 
-def create_model(config, batch_size=1, sequence_length=20, n_dims=1):
+def create_model(config: dict, batch_size: int = 1, sequence_length: int = 20, n_dims: int = 1) -> Model:
     inputs = Input(shape=(sequence_length, n_dims), batch_size=batch_size)
     x = inputs
     x = LSTM(
@@ -46,7 +46,7 @@ def create_model(config, batch_size=1, sequence_length=20, n_dims=1):
         optimizer = SGD(lr=config["lr"], momentum=config["sgd_momentum"])
 
     model.compile(
-        loss=MeanSquaredError(),
+        loss=mean_squared_error_without_nans,
         optimizer=optimizer,
         metrics=[],
     )

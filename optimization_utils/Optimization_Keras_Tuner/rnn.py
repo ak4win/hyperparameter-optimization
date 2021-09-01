@@ -1,13 +1,11 @@
+from numpy.random import seed; seed(1)
+import tensorflow as tf; tf.random.set_seed(2)
 from lib.create_rnn import create_model
-from numpy.random import seed
-
-seed(1)
-import tensorflow as tf
-
-tf.random.set_seed(2)
+from tensorflow.keras.models import Model
+from typing import Any
 
 
-def create_model_rnn(hp):
+def create_model_rnn(hp: Any) -> Model:
     activation_encoder = hp.Choice("activation_encoder", ["tanh", "relu", "sigmoid"])
     recurrent_activation_encoder = hp.Choice(
         "recurrent_activation_encoder", ["tanh", "relu", "sigmoid"]

@@ -175,15 +175,15 @@ class KerasWorker(Worker):
             ]
         )
 
-        # dropout = CSH.UniformFloatHyperparameter(
-        #     "dropout", lower=0.0, upper=0.3, default_value=0.0
-        # )
+        dropout = CSH.UniformFloatHyperparameter(
+            "dropout", lower=0.0, upper=0.3, default_value=0.0
+        )
 
-        # recurrent_dropout = CSH.UniformFloatHyperparameter(
-        #     "recurrent_dropout", lower=0.0, upper=0.3, default_value=0.0
-        # )
+        recurrent_dropout = CSH.UniformFloatHyperparameter(
+            "recurrent_dropout", lower=0.0, upper=0.3, default_value=0.0
+        )
 
-        # cs.add_hyperparameters([dropout, recurrent_dropout])
+        cs.add_hyperparameters([dropout, recurrent_dropout])
 
         # The hyperparameter sgd_momentum will be used, if the configuration
         # contains 'SGD' as optimizer.

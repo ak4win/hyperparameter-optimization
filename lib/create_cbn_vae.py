@@ -1,10 +1,8 @@
-from numpy.random import seed
+from numpy.random import seed; seed(1)
 
-seed(123)
-
-import keras
-from keras.models import Model
-from keras.layers import (
+from tensorflow import keras
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import (
     Dense,
     Lambda,
     Flatten,
@@ -13,13 +11,17 @@ from keras.layers import (
     Conv2D,
 )
 
+from lib.mse_without_nans import mean_squared_error_without_nans
 from global_utils.layers.custom_conv2d_transpose import CustomConv2DTranspose
 from global_utils.layers.max_pooling_with_argmax import MaxPoolWithArgMax
 from global_utils.layers.unpooling_with_argmax import UnMaxPoolWithArgmax
 from global_utils.layers.sampling import sample_from_latent_space
 
+from global_utils.get_data_multi_note import read_and_preprocess_data
+from global_utils.evaluation import smooth_output
 
-def create_model(config, batch_size=32, sequence_length=120):
+
+def create_model(config: dict, batch_size=32, sequence_length=120) -> Model:
     inputs = Input(shape=(sequence_length, 1, 1), batch_size=batch_size)
 
     channels, kernel = 24, 12
@@ -127,7 +129,7 @@ def create_model(config, batch_size=32, sequence_length=120):
     )(de_out_reshape8)
     outputs = de_out_transcov4
 
-    model = Model(inputs, outputs)
+    model = Model(inputs, mask1)
 
     if config["optimizer"] == "Adam":
         optimizer = keras.optimizers.Adam(lr=config["lr"])
@@ -137,8 +139,42 @@ def create_model(config, batch_size=32, sequence_length=120):
         )
 
     model.compile(
-        loss=keras.losses.MeanSquaredError(),
+        loss=mean_squared_error_without_nans,
         optimizer=optimizer,
         metrics=[],
     )
     return model
+
+
+if __name__ == "__main__":
+    x_train, x_test = read_and_preprocess_data(
+        sequence_length=120,
+        batch_size=32,
+        motes_train=[7],
+        motes_test=[7],
+    )
+
+    # split train and test data
+    train_test_cutoff = 320
+    x_train = x_train[:train_test_cutoff, :, :]
+    x_test = x_test[train_test_cutoff:, :, :]
+
+    model = create_model({'encoder_activation': 'tanh', 'decoder_activation': 'tanh', 'dense_nodes': 33,
+                          'bottleneck_activation': 'relu', 'lr': 0.001521356711612709, 'optimizer': 'Adam',
+                          'sgd_momentum': 0.5091287212784572})
+    history = model.fit(
+        x_train,
+        x_train,
+        batch_size=32,
+        epochs=500,
+        validation_data=(x_test, x_test),
+        shuffle=False,
+        callbacks=[],
+    ).history
+
+    train_preds = model.predict(x_train, batch_size=32)
+    test_preds = model.predict(x_test, batch_size=32)
+
+    reconstruction, prms_diff = smooth_output(x_test, test_preds, smoothing_window=5)
+
+    print(f"The percentual-RMS-difference for the configuration after the re-training is {prms_diff}")

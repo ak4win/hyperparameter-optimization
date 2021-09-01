@@ -29,6 +29,26 @@ from global_utils.evaluation import smooth_output
 from global_utils.get_data_multi_note import read_and_preprocess_data
 from optimization_utils.Optimization_HpBandSter.get_configs import get_num_configs
 
+from lib.create_cbn_vae import create_model
+
+x_train, x_test = read_and_preprocess_data(
+    sequence_length=120,
+    batch_size=32,
+    motes_train=[7],
+    motes_test=[7],
+)
+
+# split train and test data
+train_test_cutoff = 320
+x_train = x_train[:train_test_cutoff, :, :]
+x_test = x_test[train_test_cutoff:, :, :]
+
+model = create_model({'encoder_activation': 'tanh', 'decoder_activation': 'tanh', 'dense_nodes': 33,
+                      'bottleneck_activation': 'relu', 'lr': 0.001521356711612709, 'optimizer': 'Adam',
+                      'sgd_momentum': 0.5091287212784572})
+x = model(x_train)
+y =1 
+exit()
 # Third party libraries
 import matplotlib.pyplot as plt
 from datetime import datetime
@@ -48,7 +68,7 @@ model_config = model_configs[current_model]
 
 # choose an optimization method "RS" = Random Search, "BO" == Bayesian Optimization,
 # "HB" = Hyperband, "HpBandSter" == Bayesian Optimization Hyperband (BOHB)
-current_optimization_method = "RS"
+current_optimization_method = "HpBandSter"
 
 
 x_train, x_test = read_and_preprocess_data(
